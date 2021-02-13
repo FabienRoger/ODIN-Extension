@@ -2,6 +2,7 @@
 - ODIN is a popular technique for detecting out-of-distribution (OOD) examples by test-time processing: perturb the input image with adversarial attacks and figure out from response if the image is OOD or not
 - as projects we can explore different adversarial attacks to check for improving performance
 - ODIN uses OOD data during training which is not realistic. We can think of some strategies to avoid this.
+- various other datasets and types of OOD data or shifts can be considered: e.g. [natural adversarial examples](https://github.com/hendrycks/natural-adv-examples)
 
 ----------------
 
