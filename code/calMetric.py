@@ -26,6 +26,9 @@ import numpy as np
 import time
 from scipy import misc
 
+def to_np_float(f):
+    return to_np_float(f) # type: ignore
+
 
 def tpr95(name):
     #calculate the falsepositive error when tpr is 95%
@@ -34,11 +37,13 @@ def tpr95(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Base_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Base_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 1 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 1    
+        start = 0.1
+        end = 1 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 1
+    else:
+        raise ValueError(f"Invalid dataset name {name}")
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
@@ -46,8 +51,8 @@ def tpr95(name):
     total = 0.0
     fpr = 0.0
     for delta in np.arange(start, end, gap):
-        tpr = np.sum(np.sum(X1 >= delta)) / np.float(len(X1))
-        error2 = np.sum(np.sum(Y1 > delta)) / np.float(len(Y1))
+        tpr = np.sum(np.sum(X1 >= delta)) / to_np_float(len(X1))
+        error2 = np.sum(np.sum(Y1 > delta)) / to_np_float(len(Y1))
         if tpr <= 0.9505 and tpr >= 0.9495:
             fpr += error2
             total += 1
@@ -58,11 +63,13 @@ def tpr95(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Our_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Our_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 0.12 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 0.0104    
+        start = 0.1
+        end = 0.12 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 0.0104    
+    else:
+        raise ValueError(f"Invalid dataset name {name}")
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
@@ -70,8 +77,8 @@ def tpr95(name):
     total = 0.0
     fpr = 0.0
     for delta in np.arange(start, end, gap):
-        tpr = np.sum(np.sum(X1 >= delta)) / np.float(len(X1))
-        error2 = np.sum(np.sum(Y1 > delta)) / np.float(len(Y1))
+        tpr = np.sum(np.sum(X1 >= delta)) / to_np_float(len(X1))
+        error2 = np.sum(np.sum(Y1 > delta)) / to_np_float(len(Y1))
         if tpr <= 0.9505 and tpr >= 0.9495:
             fpr += error2
             total += 1
@@ -86,11 +93,13 @@ def auroc(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Base_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Base_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 1 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 1    
+        start = 0.1
+        end = 1 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 1    
+    else:
+        raise ValueError(f"Invalid dataset name {name}")
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
@@ -98,21 +107,23 @@ def auroc(name):
     aurocBase = 0.0
     fprTemp = 1.0
     for delta in np.arange(start, end, gap):
-        tpr = np.sum(np.sum(X1 >= delta)) / np.float(len(X1))
-        fpr = np.sum(np.sum(Y1 > delta)) / np.float(len(Y1))
+        tpr = np.sum(np.sum(X1 >= delta)) / to_np_float(len(X1))
+        fpr = np.sum(np.sum(Y1 > delta)) / to_np_float(len(Y1))
         aurocBase += (-fpr+fprTemp)*tpr
         fprTemp = fpr
-    aurocBase += fpr * tpr
+    aurocBase += fpr * tpr # type: ignore
     # calculate our algorithm
     T = 1000
     cifar = np.loadtxt('./softmax_scores/confidence_Our_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Our_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 0.12 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 0.0104    
+        start = 0.1
+        end = 0.12 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 0.0104  
+    else:
+        raise ValueError(f"Invalid dataset name {name}")  
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
@@ -120,11 +131,11 @@ def auroc(name):
     aurocNew = 0.0
     fprTemp = 1.0
     for delta in np.arange(start, end, gap):
-        tpr = np.sum(np.sum(X1 >= delta)) / np.float(len(X1))
-        fpr = np.sum(np.sum(Y1 >= delta)) / np.float(len(Y1))
+        tpr = np.sum(np.sum(X1 >= delta)) / to_np_float(len(X1))
+        fpr = np.sum(np.sum(Y1 >= delta)) / to_np_float(len(Y1))
         aurocNew += (-fpr+fprTemp)*tpr
         fprTemp = fpr
-    aurocNew += fpr * tpr
+    aurocNew += fpr * tpr # type: ignore
     return aurocBase, aurocNew
 
 def auprIn(name):
@@ -134,11 +145,13 @@ def auprIn(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Base_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Base_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 1 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 1    
+        start = 0.1
+        end = 1 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 1 
+    else:
+        raise ValueError(f"Invalid dataset name {name}")   
     gap = (end- start)/100000
     precisionVec = []
     recallVec = []
@@ -148,8 +161,8 @@ def auprIn(name):
     auprBase = 0.0
     recallTemp = 1.0
     for delta in np.arange(start, end, gap):
-        tp = np.sum(np.sum(X1 >= delta)) / np.float(len(X1))
-        fp = np.sum(np.sum(Y1 >= delta)) / np.float(len(Y1))
+        tp = np.sum(np.sum(X1 >= delta)) / to_np_float(len(X1))
+        fp = np.sum(np.sum(Y1 >= delta)) / to_np_float(len(Y1))
         if tp + fp == 0: continue
         precision = tp / (tp + fp)
         recall = tp
@@ -157,7 +170,7 @@ def auprIn(name):
         recallVec.append(recall)
         auprBase += (recallTemp-recall)*precision
         recallTemp = recall
-    auprBase += recall * precision
+    auprBase += recall * precision # type: ignore
     #print(recall, precision)
 
     # calculate our algorithm
@@ -165,11 +178,13 @@ def auprIn(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Our_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Our_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 0.12 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 0.0104    
+        start = 0.1
+        end = 0.12 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 0.0104   
+    else:
+        raise ValueError(f"Invalid dataset name {name}") 
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
@@ -177,8 +192,8 @@ def auprIn(name):
     auprNew = 0.0
     recallTemp = 1.0
     for delta in np.arange(start, end, gap):
-        tp = np.sum(np.sum(X1 >= delta)) / np.float(len(X1))
-        fp = np.sum(np.sum(Y1 >= delta)) / np.float(len(Y1))
+        tp = np.sum(np.sum(X1 >= delta)) / to_np_float(len(X1))
+        fp = np.sum(np.sum(Y1 >= delta)) / to_np_float(len(Y1))
         if tp + fp == 0: continue
         precision = tp / (tp + fp)
         recall = tp
@@ -186,7 +201,7 @@ def auprIn(name):
         #recallVec.append(recall)
         auprNew += (recallTemp-recall)*precision
         recallTemp = recall
-    auprNew += recall * precision
+    auprNew += recall * precision # type: ignore
     return auprBase, auprNew
 
 def auprOut(name):
@@ -196,25 +211,27 @@ def auprOut(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Base_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Base_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 1 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 1    
+        start = 0.1
+        end = 1 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 1    
+    else:
+        raise ValueError(f"Invalid dataset name {name}")
     gap = (end- start)/100000
     Y1 = other[:, 2]
     X1 = cifar[:, 2]
     auprBase = 0.0
     recallTemp = 1.0
     for delta in np.arange(end, start, -gap):
-        fp = np.sum(np.sum(X1 < delta)) / np.float(len(X1))
-        tp = np.sum(np.sum(Y1 < delta)) / np.float(len(Y1))
+        fp = np.sum(np.sum(X1 < delta)) / to_np_float(len(X1))
+        tp = np.sum(np.sum(Y1 < delta)) / to_np_float(len(Y1))
         if tp + fp == 0: break
         precision = tp / (tp + fp)
         recall = tp
         auprBase += (recallTemp-recall)*precision
         recallTemp = recall
-    auprBase += recall * precision
+    auprBase += recall * precision # type: ignore
         
     
     # calculate our algorithm
@@ -222,11 +239,13 @@ def auprOut(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Our_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Our_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 0.12 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 0.0104    
+        start = 0.1
+        end = 0.12 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 0.0104    
+    else:
+        raise ValueError(f"Invalid dataset name {name}")
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
@@ -234,14 +253,14 @@ def auprOut(name):
     auprNew = 0.0
     recallTemp = 1.0
     for delta in np.arange(end, start, -gap):
-        fp = np.sum(np.sum(X1 < delta)) / np.float(len(X1))
-        tp = np.sum(np.sum(Y1 < delta)) / np.float(len(Y1))
+        fp = np.sum(np.sum(X1 < delta)) / to_np_float(len(X1))
+        tp = np.sum(np.sum(Y1 < delta)) / to_np_float(len(Y1))
         if tp + fp == 0: break
         precision = tp / (tp + fp)
         recall = tp
         auprNew += (recallTemp-recall)*precision
         recallTemp = recall
-    auprNew += recall * precision
+    auprNew += recall * precision # type: ignore
     return auprBase, auprNew
 
 
@@ -253,19 +272,21 @@ def detection(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Base_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Base_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 1 
-    if name == "CIFAR-100": 
-	start = 0.01
-	end = 1    
+        start = 0.1
+        end = 1 
+    elif name == "CIFAR-100": 
+        start = 0.01
+        end = 1    
+    else:
+        raise ValueError(f"Invalid dataset name {name}")
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
     X1 = cifar[:, 2]
     errorBase = 1.0
     for delta in np.arange(start, end, gap):
-        tpr = np.sum(np.sum(X1 < delta)) / np.float(len(X1))
-        error2 = np.sum(np.sum(Y1 > delta)) / np.float(len(Y1))
+        tpr = np.sum(np.sum(X1 < delta)) / to_np_float(len(X1))
+        error2 = np.sum(np.sum(Y1 > delta)) / to_np_float(len(Y1))
         errorBase = np.minimum(errorBase, (tpr+error2)/2.0)
 
     # calculate our algorithm
@@ -273,19 +294,19 @@ def detection(name):
     cifar = np.loadtxt('./softmax_scores/confidence_Our_In.txt', delimiter=',')
     other = np.loadtxt('./softmax_scores/confidence_Our_Out.txt', delimiter=',')
     if name == "CIFAR-10": 
-	start = 0.1
-	end = 0.12 
+        start = 0.1
+        end = 0.12 
     if name == "CIFAR-100": 
-	start = 0.01
-	end = 0.0104    
+        start = 0.01
+        end = 0.0104    
     gap = (end- start)/100000
     #f = open("./{}/{}/T_{}.txt".format(nnName, dataName, T), 'w')
     Y1 = other[:, 2]
     X1 = cifar[:, 2]
     errorNew = 1.0
     for delta in np.arange(start, end, gap):
-        tpr = np.sum(np.sum(X1 < delta)) / np.float(len(X1))
-        error2 = np.sum(np.sum(Y1 > delta)) / np.float(len(Y1))
+        tpr = np.sum(np.sum(X1 < delta)) / to_np_float(len(X1))
+        error2 = np.sum(np.sum(Y1 > delta)) / to_np_float(len(Y1))
         errorNew = np.minimum(errorNew, (tpr+error2)/2.0)
             
     return errorBase, errorNew
@@ -295,17 +316,20 @@ def detection(name):
 
 def metric(nn, data):
     if nn == "densenet10" or nn == "wideresnet10": indis = "CIFAR-10"
-    if nn == "densenet100" or nn == "wideresnet100": indis = "CIFAR-100"
+    elif nn == "densenet100" or nn == "wideresnet100": indis = "CIFAR-100"
+    else: raise ValueError(f"Invalid neural network name {nn}")
     if nn == "densenet10" or nn == "densenet100": nnStructure = "DenseNet-BC-100"
-    if nn == "wideresnet10" or nn == "wideresnet100": nnStructure = "Wide-ResNet-28-10"
+    elif nn == "wideresnet10" or nn == "wideresnet100": nnStructure = "Wide-ResNet-28-10"
+    else: raise ValueError(f"Invalid neural network name {nn}")
     
     if data == "Imagenet": dataName = "Tiny-ImageNet (crop)"
-    if data == "Imagenet_resize": dataName = "Tiny-ImageNet (resize)"
-    if data == "LSUN": dataName = "LSUN (crop)"
-    if data == "LSUN_resize": dataName = "LSUN (resize)"
-    if data == "iSUN": dataName = "iSUN"
-    if data == "Gaussian": dataName = "Gaussian noise"
-    if data == "Uniform": dataName = "Uniform Noise"
+    elif data == "Imagenet_resize": dataName = "Tiny-ImageNet (resize)"
+    elif data == "LSUN": dataName = "LSUN (crop)"
+    elif data == "LSUN_resize": dataName = "LSUN (resize)"
+    elif data == "iSUN": dataName = "iSUN"
+    elif data == "Gaussian": dataName = "Gaussian noise"
+    elif data == "Uniform": dataName = "Uniform Noise"
+    else: raise ValueError(f"Invalid dataset name {data}")
     fprBase, fprNew = tpr95(indis)
     errorBase, errorNew = detection(indis)
     aurocBase, aurocNew = auroc(indis)

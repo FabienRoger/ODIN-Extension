@@ -43,7 +43,7 @@ Wide ResNet     |  3.71       | 19.86
 * Anaconda2 or 3
 * At least **three** GPU
 
-	**Note:** Reproducing results of DenseNet-BC only requires **one** GPU, but reproducing results of Wide ResNet requires **three** GPUs. Single GPU version for Wide ResNet will be released soon in the future.  
+        **Note:** Reproducing results of DenseNet-BC only requires **one** GPU, but reproducing results of Wide ResNet requires **three** GPUs. Single GPU version for Wide ResNet will be released soon in the future.  
 
 ### Downloading  Out-of-Distribtion Datasets
 We provide download links of five out-of-distributin datasets:
@@ -99,43 +99,43 @@ python main.py --nn densenet10 --out_dataset Imagenet --magnitude 0.0014 --tempe
 #### args
 * **args.nn**: the arguments of neural networks are shown as follows
 
-	Nerual Network Models | args.nn
-	----------------------|--------
-	DenseNet-BC trained on CIFAR-10| densenet10
-	DenseNet-BC trained on CIFAR-100| densenet100
+        Nerual Network Models | args.nn
+        ----------------------|--------
+        DenseNet-BC trained on CIFAR-10| densenet10
+        DenseNet-BC trained on CIFAR-100| densenet100
 * **args.out_dataset**: the arguments of out-of-distribution datasets are shown as follows
 
-	Out-of-Distribution Datasets     | args.out_dataset
-	------------------------------------|-----------------
-	Tiny-ImageNet (crop)                | Imagenet
-	Tiny-ImageNet (resize)              | Imagenet_resize
-	LSUN (crop)                         | LSUN
-	LSUN (resize)                       | LSUN_resize
-	iSUN                                | iSUN
-	Uniform random noise                | Uniform
-	Gaussian random noise               | Gaussian
+        Out-of-Distribution Datasets     | args.out_dataset
+        ------------------------------------|-----------------
+        Tiny-ImageNet (crop)                | Imagenet
+        Tiny-ImageNet (resize)              | Imagenet_resize
+        LSUN (crop)                         | LSUN
+        LSUN (resize)                       | LSUN_resize
+        iSUN                                | iSUN
+        Uniform random noise                | Uniform
+        Gaussian random noise               | Gaussian
 
 * **args.magnitude**: the optimal noise magnitude can be found below. In practice, the optimal choices of noise magnitude are model-specific and need to be tuned accordingly.
 
-	Out-of-Distribution Datasets        |   densenet10     |  densenet100  | wideresnet10   | wideresnet100
-	------------------------------------|------------------|-------------  | -------------- |--------------
-	Tiny-ImageNet (crop)                | 0.0014           | 0.0014        | 0.0005           | 0.0028
-	Tiny-ImageNet (resize)              | 0.0014           | 0.0028        | 0.0011           | 0.0028
-	LSUN (crop)                         | 0                | 0.0028        | 0                | 0.0048
-	LSUN (resize)                       | 0.0014           | 0.0028        | 0.0006           | 0.002
-	iSUN                                | 0.0014           | 0.0028        | 0.0008           | 0.0028
-	Uniform random noise                | 0.0014           | 0.0028        | 0.0014           | 0.0028
-	Gaussian random noise               | 0.0014           |0.0028         | 0.0014           | 0.0028
+        Out-of-Distribution Datasets        |   densenet10     |  densenet100  | wideresnet10   | wideresnet100
+        ------------------------------------|------------------|-------------  | -------------- |--------------
+        Tiny-ImageNet (crop)                | 0.0014           | 0.0014        | 0.0005           | 0.0028
+        Tiny-ImageNet (resize)              | 0.0014           | 0.0028        | 0.0011           | 0.0028
+        LSUN (crop)                         | 0                | 0.0028        | 0                | 0.0048
+        LSUN (resize)                       | 0.0014           | 0.0028        | 0.0006           | 0.002
+        iSUN                                | 0.0014           | 0.0028        | 0.0008           | 0.0028
+        Uniform random noise                | 0.0014           | 0.0028        | 0.0014           | 0.0028
+        Gaussian random noise               | 0.0014           |0.0028         | 0.0014           | 0.0028
 
 * **args.temperature**: temperature is set to 1000 in all cases.
 * **args.gpu**: make sure you use the following gpu when running the code:
 
-	Neural Network Models |  args.gpu
-	----------------------|----------
-	densenet10            | 0
-	densenet100           | 0
-	wideresnet10          | 1
-	wideresnet100         | 2
+        Neural Network Models |  args.gpu
+        ----------------------|----------
+        densenet10            | 0
+        densenet100           | 0
+        wideresnet10          | 1
+        wideresnet100         | 2
 
 ### Outputs
 Here is an example of output.

@@ -43,7 +43,7 @@ parser.add_argument('--magnitude', default=0.0014, type=float,
 parser.add_argument('--temperature', default=1000, type=int,
                     help='temperature scaling')
 parser.add_argument('--gpu', default = 0, type = int,
-		    help='gpu index')
+                    help='gpu index')
 parser.set_defaults(argument=True)
 
 

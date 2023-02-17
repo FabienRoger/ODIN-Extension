@@ -53,7 +53,7 @@ def testData(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName, dat
         
         # Using temperature scaling
         outputs = outputs / temper
-	
+        
         # Calculating the perturbation we need to add, that is,
         # the sign of gradient of cross entropy loss w.r.t. input
         maxIndexTemp = np.argmax(nnOutputs)
@@ -69,7 +69,7 @@ def testData(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName, dat
         gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
         gradient[0][2] = (gradient[0][2])/(66.7/255.0)
         # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data,  -noiseMagnitude1, gradient)
+        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
         outputs = net1(Variable(tempInputs))
         outputs = outputs / temper
         # Calculating the confidence after adding perturbations
@@ -126,7 +126,7 @@ def testData(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName, dat
         gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
         gradient[0][2] = (gradient[0][2])/(66.7/255.0)
         # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data,  -noiseMagnitude1, gradient)
+        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
         outputs = net1(Variable(tempInputs))
         outputs = outputs / temper
         # Calculating the confidence after adding perturbations
@@ -190,7 +190,7 @@ def testGaussian(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName,
         gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
         gradient[0][2] = (gradient[0][2])/(66.7/255.0)
         # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data,  -noiseMagnitude1, gradient)
+        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
         outputs = net1(Variable(tempInputs))
         outputs = outputs / temper
         # Calculating the confidence after adding perturbations
@@ -250,7 +250,7 @@ def testGaussian(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName,
         gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
         gradient[0][2] = (gradient[0][2])/(66.7/255.0)
         # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data,  -noiseMagnitude1, gradient)
+        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
         outputs = net1(Variable(tempInputs))
         outputs = outputs / temper
         # Calculating the confidence after adding perturbations
@@ -315,7 +315,7 @@ def testUni(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName, data
         gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
         gradient[0][2] = (gradient[0][2])/(66.7/255.0)
         # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data,  -noiseMagnitude1, gradient)
+        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
         outputs = net1(Variable(tempInputs))
         outputs = outputs / temper
         # Calculating the confidence after adding perturbations
@@ -374,7 +374,7 @@ def testUni(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName, data
         gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
         gradient[0][2] = (gradient[0][2])/(66.7/255.0)
         # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data,  -noiseMagnitude1, gradient)
+        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
         outputs = net1(Variable(tempInputs))
         outputs = outputs / temper
         # Calculating the confidence after adding perturbations
