@@ -39,20 +39,24 @@ class Algorithm(ABC):
 
 
 class BaseAlgorithm(Algorithm):
+    def __init__(self, temperature=1, name="Base"):
+        self.temperature = temperature
+        self._name = name
+
     @torch.no_grad()
     def apply(self, images, net):
         outputs = net(images)
-        nnOutputs = np.max(logits_to_probs(outputs), axis=-1)
+        nnOutputs = np.max(logits_to_probs(outputs, self.temperature), axis=-1)
         return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
     def name(self) -> str:
-        return "Base"
+        return self._name
 
 
 class OdinAlgorithm(Algorithm):
-    def __init__(self, temper, noiseMagnitude, iters=1, name="Odin"):
-        self.temper = temper
+    def __init__(self, temperature, noiseMagnitude, iters=1, name="Odin"):
+        self.temperature = temperature
         self.noiseMagnitude = noiseMagnitude
         self.iters = iters
         self.criteria = torch.nn.CrossEntropyLoss()
@@ -65,8 +69,8 @@ class OdinAlgorithm(Algorithm):
             opt.zero_grad()
             outputs = net(inputs)
 
-            # Using temperature scaling
-            outputs = outputs / self.temper
+            # Using temperatureature scaling
+            outputs = outputs / self.temperature
             nnOutputs = logits_to_probs(outputs)
             maxIndexTemp = np.argmax(nnOutputs, axis=-1)
 
@@ -87,7 +91,7 @@ class OdinAlgorithm(Algorithm):
         with torch.no_grad():
             outputs = net(inputs)
             # Calculating the confidence after adding perturbations
-            nnOutputs = np.max(logits_to_probs(outputs), axis=-1)
+            nnOutputs = np.max(logits_to_probs(outputs, self.temperature), axis=-1)
             return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
@@ -96,9 +100,9 @@ class OdinAlgorithm(Algorithm):
 
 
 @torch.no_grad()
-def logits_to_probs(logits: torch.Tensor, temperature=1) -> np.ndarray:
+def logits_to_probs(logits: torch.Tensor, temperatureature=1) -> np.ndarray:
     """Takes torch logits on gpu, returns numpy probs on cpu"""
-    return torch.softmax(logits / temperature, dim=-1).detach().cpu().numpy()
+    return torch.softmax(logits / temperatureature, dim=-1).detach().cpu().numpy()
 
 
 def testData(

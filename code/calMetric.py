@@ -86,6 +86,6 @@ def metric(nn, dsName, algorithms):
     print("{:31}{:>22}".format("Out-of-distribution dataset:", dsName))
     print("")
 
-    print(f"{'Method:':20}" + " ".join([f"{alg_name:>12}" for alg_name in algnames]))
+    print(f"{'Method':20}|" + "|".join([f"{alg_name:>15}" for alg_name in algnames]))
     for method_name, method_res in methods_res.items():
-        print(f"{method_name:20}" + " ".join([f"{res * 100:>12.1f}%" for res in method_res]))
+        print(f"{method_name:20}|" + "|".join([f"{res * 100:>14.1f}%" for res in method_res]))
