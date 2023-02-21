@@ -13,18 +13,80 @@ Created on Sat Sep 19 20:55:56 2015
 """
 
 from __future__ import print_function
+from abc import abstractmethod, ABC
 import torch
 from torch.autograd import Variable
 import numpy as np
 import numpy as np
 import time
 from tqdm import tqdm
-from constants import NORM_SCALE
+from constants import NORM_SCALE, file_name
 from itertools import islice
 
 
-def logits_to_probs(logits, temperature=1):
-    """Takes torch logits on gpu, returns numpy probs on cpu"""
+class Algorithm(ABC):
+    @abstractmethod
+    def apply(self, images, net) -> list[float]:
+        ...
+
+    @property  # type: ignore
+    @abstractmethod
+    def name(self) -> str:
+        ...
+
+
+class BaseAlgorithm(Algorithm):
+    def apply(self, images, net):
+        outputs = net(images)
+        nnOutputs = np.max(logits_to_probs(outputs))  # TODO: make batchable
+        return [nnOutputs]
+
+    @property
+    def name(self) -> str:
+        return "Base"
+
+
+class OdinAlgorithm(Algorithm):
+    def __init__(self, temper, noiseMagnitude):
+        self.temper = temper
+        self.noiseMagnitude = noiseMagnitude
+        self.criteria = torch.nn.CrossEntropyLoss()
+
+    def apply(self, images, net):
+        inputs = Variable(images, requires_grad=True)
+        outputs = net(inputs)
+
+        # Using temperature scaling
+        outputs = outputs / self.temper
+        nnOutputs = logits_to_probs(outputs)
+        maxIndexTemp = np.argmax(nnOutputs)  # TODO: make batchable
+        labels = Variable(torch.tensor([maxIndexTemp], device=outputs.device, dtype=torch.long))
+
+        loss = self.criteria(outputs, labels)
+        loss.backward()
+
+        # Normalizing the gradient to binary in {0, 1}
+        gradient = torch.ge(inputs.grad.data, 0)
+        gradient = (gradient.float() - 0.5) * 2
+        # Normalizing the gradient to the same space of image
+        norm_scale = torch.tensor(NORM_SCALE, device=gradient.device).view(1, 3, 1, 1)
+        gradient /= norm_scale
+        # Adding small perturbations to images
+        tempInputs = torch.add(inputs.data, gradient, alpha=-self.noiseMagnitude)
+        outputs = net(Variable(tempInputs))
+        # Calculating the confidence after adding perturbations
+        nnOutputs = logits_to_probs(outputs, self.temper)
+        return [np.max(nnOutputs)]  # TODO: make batchable
+
+    @property
+    def name(self) -> str:
+        return "Odin"
+
+
+def logits_to_probs(logits: torch.Tensor, temperature=1) -> np.ndarray:
+    """Takes torch logits on gpu, returns numpy probs on cpu
+
+    TODO: make it batchable"""
     logits = logits / temperature
     nnOutputs = logits.data.cpu()
     nnOutputs = nnOutputs.numpy()
@@ -35,59 +97,32 @@ def logits_to_probs(logits, temperature=1):
 
 
 def testData(
-    net1,
-    criterion,
+    net,
     CUDA_DEVICE,
     testLoaderIn,
     testLoaderOut,
     nnName,
     dataName,
-    noiseMagnitude1,
-    temper,
-    max_n=100,
-    skip_first_n=1000,
+    algorithms: list[Algorithm],
+    maxImages=100,
+    skipFirstImages=1000,
 ):
 
     for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
         print(f"Processing {part}-distribution images")
-        f = open(f"./softmax_scores/confidence_Base_{part}.txt", "w")
-        g = open(f"./softmax_scores/confidence_Our_{part}.txt", "w")
 
-        N = min(len(testLoader) - skip_first_n, max_n)
-        iterator = enumerate(islice(testLoader, skip_first_n, skip_first_n + N))
+        files = {alg.name: open(file_name(nnName, dataName, alg.name, part), "w") for alg in algorithms}
+
+        N = min(len(testLoader) - skipFirstImages, maxImages)
+        iterator = enumerate(islice(testLoader, skipFirstImages, skipFirstImages + N))
 
         for j, data in tqdm(iterator, total=N):
             images, _ = data  # (batch_size, 3, 32, 32), where batch_size = 1
+            images = images.cuda(CUDA_DEVICE)
 
-            inputs = Variable(images.cuda(CUDA_DEVICE), requires_grad=True)
-            # print(inputs.shape)
-            outputs = net1(inputs)
-
-            # Calculating the confidence of the output, no perturbation added here, no temperature scaling used
-            nnOutputs = logits_to_probs(outputs)
-            f.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-
-            # Using temperature scaling
-            outputs = outputs / temper
-
-            # Calculating the perturbation we need to add, that is,
-            # the sign of gradient of cross entropy loss w.r.t. input
-            maxIndexTemp = np.argmax(nnOutputs)
-            labels = Variable(torch.LongTensor([maxIndexTemp]).cuda(CUDA_DEVICE))
-            loss = criterion(outputs, labels)
-            loss.backward()
-
-            # Normalizing the gradient to binary in {0, 1}
-            gradient = torch.ge(inputs.grad.data, 0)
-            gradient = (gradient.float() - 0.5) * 2
-            # Normalizing the gradient to the same space of image
-            norm_scale = torch.tensor(NORM_SCALE).cuda(CUDA_DEVICE).view(1, 3, 1, 1)
-            gradient /= norm_scale
-            # Adding small perturbations to images
-            tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
-            outputs = net1(Variable(tempInputs))
-            # Calculating the confidence after adding perturbations
-            nnOutputs = logits_to_probs(outputs, temper)
-            g.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-        f.close()
-        g.close()
+            for alg in algorithms:
+                scores = alg.apply(images, net)
+                for score in scores:
+                    files[alg.name].write(f"{score}\n")
+        for f in files.values():
+            f.close()

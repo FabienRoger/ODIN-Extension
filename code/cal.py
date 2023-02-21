@@ -31,7 +31,6 @@ from constants import NORM_BIAS, NORM_SCALE
 from customDatasets import UniformNoiseDataset, GaussianNoiseDataset
 from torch.serialization import SourceChangeWarning
 warnings.filterwarnings("ignore", category=SourceChangeWarning)
-
 # CUDA_DEVICE = 0
 
 start = time.time()
@@ -57,10 +56,7 @@ transform = transforms.Compose(
 # imName = "Imagenet"
 
 
-criterion = nn.CrossEntropyLoss()
-
-
-def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature):
+def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages):
 
     net1 = torch.load("../models/{}.pth".format(nnName))
     optimizer1 = optim.SGD(net1.parameters(), lr=0, momentum=0)
@@ -84,5 +80,10 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature):
 
     testloaderOut = DataLoader(testsetout, batch_size=1, shuffle=False, num_workers=2)
 
-    d.testData(net1, criterion, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, epsilon, temperature)
-    m.metric(nnName, dataName)
+    algorithms = [
+        d.BaseAlgorithm(),
+        d.OdinAlgorithm(temperature, epsilon),
+    ]
+    
+    d.testData(net1, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, algorithms, maxImages=maxImages)
+    m.metric(nnName, dataName, algorithms)

@@ -27,12 +27,13 @@ import numpy as np
 import time
 from scipy import misc
 from sklearn.metrics import roc_auc_score, roc_curve
+from constants import file_name
 
 
 def tpr95(labels, data):
     # calculate the falsepositive error when tpr is 95%
 
-    fpr, tpr, thresholds = roc_curve(labels, data)
+    fpr, tpr, _ = roc_curve(labels, data)
     tpr95_index = np.where(tpr >= 0.95)[0][0]
     return fpr[tpr95_index]
 
@@ -41,7 +42,7 @@ def auroc(labels, data):
     return roc_auc_score(labels, data)
 
 
-def metric(nn, data):
+def metric(nn, dsName, algorithms):
     if nn == "densenet10" or nn == "wideresnet10":
         indis = "CIFAR-10"
     elif nn == "densenet100" or nn == "wideresnet100":
@@ -55,41 +56,28 @@ def metric(nn, data):
     else:
         raise ValueError(f"Invalid neural network name {nn}")
 
-    if data == "Imagenet":
-        dataName = "Tiny-ImageNet (crop)"
-    elif data == "Imagenet_resize":
-        dataName = "Tiny-ImageNet (resize)"
-    elif data == "LSUN":
-        dataName = "LSUN (crop)"
-    elif data == "LSUN_resize":
-        dataName = "LSUN (resize)"
-    elif data == "iSUN":
-        dataName = "iSUN"
-    elif data == "Gaussian":
-        dataName = "Gaussian noise"
-    elif data == "Uniform":
-        dataName = "Uniform Noise"
-    else:
-        raise ValueError(f"Invalid dataset name {data}")
+    methods = {
+        "FPR at TPR 95%:": (tpr95),
+        "AUROC:": auroc,
+    }
 
-    labels_and_data = []
-    for algorithm in ["Base", "Our"]:
-        datas = [
-            np.loadtxt(f"./softmax_scores/confidence_{algorithm}_{part}.txt", delimiter=",")[:, 2]
-            for part in ["In", "Out"]
-        ]
+    algnames = [alg.name for alg in algorithms]
+
+    methods_res = {method_name: [] for method_name in methods.keys()}
+
+    for alg_name in algnames:
+        datas = [np.loadtxt(file_name(nn, dsName, alg_name, part), delimiter=",") for part in ["In", "Out"]]
         assert datas[0].shape == datas[1].shape
         data = np.concatenate(datas)
         labels = np.concatenate([np.ones(len(data) // 2), np.zeros(len(data) // 2)])
-        labels_and_data.append((labels, data))
+        for method_name, method in methods.items():
+            methods_res[method_name].append(method(labels, data))
 
-    base, our = labels_and_data
-    fprBase, fprNew = tpr95(*base), tpr95(*our)
-    aurocBase, aurocNew = auroc(*base), auroc(*our)
     print("{:31}{:>22}".format("Neural network architecture:", nnStructure))
     print("{:31}{:>22}".format("In-distribution dataset:", indis))
-    print("{:31}{:>22}".format("Out-of-distribution dataset:", dataName))
+    print("{:31}{:>22}".format("Out-of-distribution dataset:", dsName))
     print("")
-    print("{:>34}{:>19}".format("Baseline", "Our Method"))
-    print("{:20}{:13.1f}%{:>18.1f}% ".format("FPR at TPR 95%:", fprBase * 100, fprNew * 100))
-    print("{:20}{:13.1f}%{:>18.1f}%".format("AUROC:", aurocBase * 100, aurocNew * 100))
+
+    methods_string = f"{'Method:':20}" + " ".join([f"{alg_name:>12}" for alg_name in algnames])
+    for method_name, method_res in methods_res.items():
+        print(f"{method_name:20}" + " ".join([f"{res * 100:>12.1f}%" for res in method_res]))
