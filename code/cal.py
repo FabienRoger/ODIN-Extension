@@ -85,6 +85,7 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
     algorithms = [
         d.BaseAlgorithm(),
         d.BaseAlgorithm(temperature, name=f"Base T={temperature}"),
+        d.TempBlindInit(d.BaseAlgorithm()),
         d.OdinAlgorithm(temperature, epsilon),
         d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
     ]

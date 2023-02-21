@@ -21,6 +21,8 @@ import numpy as np
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import os
+from datetime import datetime
 
 # import matplotlib.pyplot as plt
 import numpy as np
@@ -81,11 +83,21 @@ def metric(nn, dsName, algorithms):
         for method_name, method in methods.items():
             methods_res[method_name].append(method(labels, data))
 
-    print("{:31}{:>22}".format("Neural network architecture:", nnStructure))
-    print("{:31}{:>22}".format("In-distribution dataset:", indis))
-    print("{:31}{:>22}".format("Out-of-distribution dataset:", dsName))
-    print("")
-
-    print(f"{'Method':20}|" + "|".join([f"{alg_name:>15}" for alg_name in algnames]))
+    text = [
+        "{:31}{:>22}".format("Neural network architecture:", nnStructure),
+        "{:31}{:>22}".format("Out-of-distribution dataset:", dsName),
+        "{:31}{:>22}".format("Datapoints in distribution:", len(datas[0])),  # type: ignore
+        "{:31}{:>22}".format("Datapoints out distribution:", len(datas[1])),  # type: ignore
+        "",
+        f"{'Method':20}|" + "|".join([f"{alg_name:>15}" for alg_name in algnames]),
+    ]
     for method_name, method_res in methods_res.items():
-        print(f"{method_name:20}|" + "|".join([f"{res * 100:>14.1f}%" for res in method_res]))
+        text.append(f"{method_name:20}|" + "|".join([f"{res * 100:>14.1f}%" for res in method_res]))
+
+    # Print
+    for line in text:
+        print(line)
+    # Save
+    os.makedirs("results", exist_ok=True)
+    with open(f"results/{nn}_{dsName}_{datetime.now()}.txt", "w") as f:
+        f.write("\n".join(text))

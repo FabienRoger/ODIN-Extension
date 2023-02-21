@@ -37,12 +37,12 @@ class Algorithm(ABC):
     def name(self) -> str:
         ...
 
-    def blindInit(self, net, testLoaderIn):
+    def blindInit(self, net, testLoaderIn, cuda_device: int = 0):
         pass
 
 
 class BaseAlgorithm(Algorithm):
-    def __init__(self, temperature=1, reverse=False, name="Base"):
+    def __init__(self, temperature: float = 1.0, reverse: bool = False, name: str = "Base"):
         self.temperature = temperature
         self._name = name
         self.reverse = reverse
@@ -61,7 +61,7 @@ class BaseAlgorithm(Algorithm):
 
 
 class OdinAlgorithm(Algorithm):
-    def __init__(self, temperature, noiseMagnitude, iters=1, name="Odin"):
+    def __init__(self, temperature: float, noiseMagnitude: float, iters: int = 1, name: str = "Odin"):
         self.temperature = temperature
         self.noiseMagnitude = noiseMagnitude
         self.iters = iters
@@ -106,23 +106,48 @@ class OdinAlgorithm(Algorithm):
 
 
 class TempBlindInit(Algorithm):
-    def __init__(self, parent: Union[OdinAlgorithm, BaseAlgorithm]):
+    SAMPLES = 1024
+
+    def __init__(self, parent: Union[OdinAlgorithm, BaseAlgorithm], name=None):
         self.parent = parent
+        self._name = name or f"TempBlind {parent.name}"
 
     def apply(self, images, net):
         return self.parent.apply(images, net)
 
     @property
     def name(self) -> str:
-        return self.parent.name
+        return self._name
 
     @torch.no_grad()
-    def blindInit(self, net, testLoaderIn):
-        assert False, "todo"
+    def blindInit(self, net, testLoaderIn: DataLoader, cuda_device: int = 0):
+        dataset = testLoaderIn.dataset
+        ds_len = len(dataset)  # type: ignore
+        batch_size: int = testLoaderIn.batch_size  # type: ignore
+        samples = np.random.choice(ds_len, self.SAMPLES, replace=False)
+        logits_list = []
+        batches = [samples[i : i + batch_size] for i in range(0, len(samples), batch_size)]
+        for batch in batches:
+            images = torch.stack([dataset[i][0] for i in batch], dim=0).cuda(cuda_device)
+            logits_list.append(net(images))
+        logits = torch.cat(logits_list, dim=0)
+
+        temp = 0.5
+
+        def is_temp_to_low():
+            logprobs = torch.log_softmax(logits / temp, dim=-1)
+            max_logprobs, _ = torch.max(logprobs, dim=-1)
+            top_1percent = torch.quantile(max_logprobs, 0.99).item()
+            return top_1percent > np.log(0.5)
+
+        while is_temp_to_low():
+            temp *= 2
+
+        self.parent.temperature = temp
 
 
 @torch.no_grad()
-def logits_to_logprobs(logits: torch.Tensor, temperatureature=1) -> np.ndarray:
+def logits_to_logprobs(logits: torch.Tensor, temperatureature: float = 1) -> np.ndarray:
     """Takes torch logits on gpu, returns numpy probs on cpu"""
     return torch.log_softmax(logits / temperatureature, dim=-1).detach().cpu().numpy()
 
@@ -138,6 +163,9 @@ def testData(
     maxImages=128,
     skipFirstImages=1024,
 ):
+
+    for alg in algorithms:
+        alg.blindInit(net, testLoaderIn, CUDA_DEVICE)
 
     for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
         print(f"Processing {part}-distribution images")
