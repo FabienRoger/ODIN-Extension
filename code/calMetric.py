@@ -66,7 +66,7 @@ def metric(nn, dsName, algorithms):
     methods_res = {method_name: [] for method_name in methods.keys()}
 
     for alg_name in algnames:
-        datas = [np.loadtxt(file_name(nn, dsName, alg_name, part), delimiter=",") for part in ["In", "Out"]]
+        datas = [np.loadtxt(file_name(nn, dsName, alg_name, part), delimiter=",")[:, 0] for part in ["In", "Out"]]
         assert datas[0].shape == datas[1].shape
         data = np.concatenate(datas)
         labels = np.concatenate([np.ones(len(data) // 2), np.zeros(len(data) // 2)])
@@ -78,6 +78,6 @@ def metric(nn, dsName, algorithms):
     print("{:31}{:>22}".format("Out-of-distribution dataset:", dsName))
     print("")
 
-    methods_string = f"{'Method:':20}" + " ".join([f"{alg_name:>12}" for alg_name in algnames])
+    print(f"{'Method:':20}" + " ".join([f"{alg_name:>12}" for alg_name in algnames]))
     for method_name, method_res in methods_res.items():
         print(f"{method_name:20}" + " ".join([f"{res * 100:>12.1f}%" for res in method_res]))

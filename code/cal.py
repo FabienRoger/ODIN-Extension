@@ -30,6 +30,7 @@ from torch.utils.data import DataLoader
 from constants import NORM_BIAS, NORM_SCALE
 from customDatasets import UniformNoiseDataset, GaussianNoiseDataset
 from torch.serialization import SourceChangeWarning
+
 warnings.filterwarnings("ignore", category=SourceChangeWarning)
 # CUDA_DEVICE = 0
 
@@ -83,7 +84,8 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages):
     algorithms = [
         d.BaseAlgorithm(),
         d.OdinAlgorithm(temperature, epsilon),
+        d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
     ]
-    
+
     d.testData(net1, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, algorithms, maxImages=maxImages)
     m.metric(nnName, dataName, algorithms)

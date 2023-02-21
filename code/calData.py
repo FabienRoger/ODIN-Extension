@@ -14,6 +14,7 @@ Created on Sat Sep 19 20:55:56 2015
 
 from __future__ import print_function
 from abc import abstractmethod, ABC
+from typing import Any
 import torch
 from torch.autograd import Variable
 import numpy as np
@@ -26,7 +27,7 @@ from itertools import islice
 
 class Algorithm(ABC):
     @abstractmethod
-    def apply(self, images, net) -> list[float]:
+    def apply(self, images, net) -> list[tuple[float, str]]:
         ...
 
     @property  # type: ignore
@@ -36,10 +37,11 @@ class Algorithm(ABC):
 
 
 class BaseAlgorithm(Algorithm):
+    @torch.no_grad()
     def apply(self, images, net):
         outputs = net(images)
         nnOutputs = np.max(logits_to_probs(outputs))  # TODO: make batchable
-        return [nnOutputs]
+        return [(nnOutputs, "0")]
 
     @property
     def name(self) -> str:
@@ -47,40 +49,48 @@ class BaseAlgorithm(Algorithm):
 
 
 class OdinAlgorithm(Algorithm):
-    def __init__(self, temper, noiseMagnitude):
+    def __init__(self, temper, noiseMagnitude, iters=1, name="Odin"):
         self.temper = temper
         self.noiseMagnitude = noiseMagnitude
+        self.iters = iters
         self.criteria = torch.nn.CrossEntropyLoss()
+        self._name = name
 
     def apply(self, images, net):
         inputs = Variable(images, requires_grad=True)
-        outputs = net(inputs)
+        opt = torch.optim.SGD([inputs], lr=1e-3)  # just here to zero
+        for _ in range(self.iters):
+            opt.zero_grad()
+            outputs = net(inputs)
 
-        # Using temperature scaling
-        outputs = outputs / self.temper
-        nnOutputs = logits_to_probs(outputs)
-        maxIndexTemp = np.argmax(nnOutputs)  # TODO: make batchable
-        labels = Variable(torch.tensor([maxIndexTemp], device=outputs.device, dtype=torch.long))
+            # Using temperature scaling
+            outputs = outputs / self.temper
+            nnOutputs = logits_to_probs(outputs)
+            maxIndexTemp = np.argmax(nnOutputs)
 
-        loss = self.criteria(outputs, labels)
-        loss.backward()
+            labels = Variable(torch.tensor([maxIndexTemp], device=outputs.device, dtype=torch.long))
 
-        # Normalizing the gradient to binary in {0, 1}
-        gradient = torch.ge(inputs.grad.data, 0)
-        gradient = (gradient.float() - 0.5) * 2
-        # Normalizing the gradient to the same space of image
-        norm_scale = torch.tensor(NORM_SCALE, device=gradient.device).view(1, 3, 1, 1)
-        gradient /= norm_scale
-        # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data, gradient, alpha=-self.noiseMagnitude)
-        outputs = net(Variable(tempInputs))
-        # Calculating the confidence after adding perturbations
-        nnOutputs = logits_to_probs(outputs, self.temper)
-        return [np.max(nnOutputs)]  # TODO: make batchable
+            loss = self.criteria(outputs, labels)
+            loss.backward()
+
+            # Normalizing the gradient to binary in {0, 1}
+            gradient = torch.ge(inputs.grad.data, 0)
+            gradient = (gradient.float() - 0.5) * 2
+            # Normalizing the gradient to the same space of image
+            norm_scale = torch.tensor(NORM_SCALE, device=gradient.device).view(1, 3, 1, 1)
+            gradient /= norm_scale
+            # Adding small perturbations to images
+            inputs.data = torch.add(inputs.data, gradient, alpha=-self.noiseMagnitude)
+
+        with torch.no_grad():
+            outputs = net(inputs)
+            # Calculating the confidence after adding perturbations
+            nnOutputs = logits_to_probs(outputs, self.temper)
+            return [(np.max(nnOutputs), "0")]  # TODO: make batchable
 
     @property
     def name(self) -> str:
-        return "Odin"
+        return self._name
 
 
 def logits_to_probs(logits: torch.Tensor, temperature=1) -> np.ndarray:
@@ -122,7 +132,7 @@ def testData(
 
             for alg in algorithms:
                 scores = alg.apply(images, net)
-                for score in scores:
-                    files[alg.name].write(f"{score}\n")
+                for score, metadata in scores:
+                    files[alg.name].write(f"{score},{metadata}\n")  # 0 to force 2D data
         for f in files.values():
             f.close()
