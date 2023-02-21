@@ -19,9 +19,7 @@ import numpy as np
 import numpy as np
 import time
 from tqdm import tqdm
-
-NORM_BIAS = [125.3 / 255, 123.0 / 255, 113.9 / 255]
-NORM_SCALE = [63.0 / 255, 62.1 / 255.0, 66.7 / 255.0]
+from constants import NORM_SCALE
 
 
 def logits_to_probs(logits, temperature=1):
@@ -35,21 +33,23 @@ def logits_to_probs(logits, temperature=1):
     return nnOutputs
 
 
-def testData(net1, criterion, CUDA_DEVICE, testLoaderIn, testLoaderOut, nnName, dataName, noiseMagnitude1, temper):
-    N = 10000
-    if dataName == "iSUN":
-        N = 8925
+def testData(
+    net1, criterion, CUDA_DEVICE, testLoaderIn, testLoaderOut, nnName, dataName, noiseMagnitude1, temper, max_n=100
+):
 
     for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
         print(f"Processing {part}-distribution images")
         f = open(f"./softmax_scores/confidence_Base_{part}.txt", "w")
         g = open(f"./softmax_scores/confidence_Our_{part}.txt", "w")
+        N = min(len(testLoader), max_n)
+
         for j, data in tqdm(enumerate(testLoader), total=N):
             # if j < 1000:
             #     continue
             images, _ = data  # (batch_size, 3, 32, 32)
 
             inputs = Variable(images.cuda(CUDA_DEVICE), requires_grad=True)
+            # print(inputs.shape)
             outputs = net1(inputs)
 
             # Calculating the confidence of the output, no perturbation added here, no temperature scaling used
