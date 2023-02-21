@@ -15,129 +15,71 @@ Created on Sat Sep 19 20:55:56 2015
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
-import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
 import numpy as np
 import time
-from scipy import misc
+from tqdm import tqdm
 
-def testData(net1, criterion, CUDA_DEVICE, testloader10, testloader, nnName, dataName, noiseMagnitude1, temper):
-    t0 = time.time()
-    f1 = open("./softmax_scores/confidence_Base_In.txt", 'w')
-    f2 = open("./softmax_scores/confidence_Base_Out.txt", 'w')
-    g1 = open("./softmax_scores/confidence_Our_In.txt", 'w')
-    g2 = open("./softmax_scores/confidence_Our_Out.txt", 'w')
+NORM_BIAS = [125.3 / 255, 123.0 / 255, 113.9 / 255]
+NORM_SCALE = [63.0 / 255, 62.1 / 255.0, 66.7 / 255.0]
+
+
+def logits_to_probs(logits, temperature=1):
+    """Takes torch logits on gpu, returns numpy probs on cpu"""
+    logits = logits / temperature
+    nnOutputs = logits.data.cpu()
+    nnOutputs = nnOutputs.numpy()
+    nnOutputs = nnOutputs[0]
+    nnOutputs = nnOutputs - np.max(nnOutputs)
+    nnOutputs = np.exp(nnOutputs) / np.sum(np.exp(nnOutputs))
+    return nnOutputs
+
+
+def testData(net1, criterion, CUDA_DEVICE, testLoaderIn, testLoaderOut, nnName, dataName, noiseMagnitude1, temper):
     N = 10000
-    if dataName == "iSUN": N = 8925
-    print("Processing in-distribution images")
-########################################In-distribution###########################################
-    for j, data in enumerate(testloader10):
-        if j<1000: continue
-        images, _ = data
-        
-        inputs = Variable(images.cuda(CUDA_DEVICE), requires_grad = True)
-        outputs = net1(inputs)
-        
+    if dataName == "iSUN":
+        N = 8925
 
-        # Calculating the confidence of the output, no perturbation added here, no temperature scaling used
-        nnOutputs = outputs.data.cpu()
-        nnOutputs = nnOutputs.numpy()
-        nnOutputs = nnOutputs[0]
-        nnOutputs = nnOutputs - np.max(nnOutputs)
-        nnOutputs = np.exp(nnOutputs)/np.sum(np.exp(nnOutputs))
-        f1.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-        
-        # Using temperature scaling
-        outputs = outputs / temper
-        
-        # Calculating the perturbation we need to add, that is,
-        # the sign of gradient of cross entropy loss w.r.t. input
-        maxIndexTemp = np.argmax(nnOutputs)
-        labels = Variable(torch.LongTensor([maxIndexTemp]).cuda(CUDA_DEVICE))
-        loss = criterion(outputs, labels)
-        loss.backward()
-        
-        # Normalizing the gradient to binary in {0, 1}
-        gradient =  torch.ge(inputs.grad.data, 0)
-        gradient = (gradient.float() - 0.5) * 2
-        # Normalizing the gradient to the same space of image
-        gradient[0][0] = (gradient[0][0] )/(63.0/255.0)
-        gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
-        gradient[0][2] = (gradient[0][2])/(66.7/255.0)
-        # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
-        outputs = net1(Variable(tempInputs))
-        outputs = outputs / temper
-        # Calculating the confidence after adding perturbations
-        nnOutputs = outputs.data.cpu()
-        nnOutputs = nnOutputs.numpy()
-        nnOutputs = nnOutputs[0]
-        nnOutputs = nnOutputs - np.max(nnOutputs)
-        nnOutputs = np.exp(nnOutputs)/np.sum(np.exp(nnOutputs))
-        g1.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-        if j % 100 == 99:
-            print("{:4}/{:4} images processed, {:.1f} seconds used.".format(j+1-1000, N-1000, time.time()-t0))
-            t0 = time.time()
-        
-        if j == N - 1: break
+    for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
+        print(f"Processing {part}-distribution images")
+        f = open(f"./softmax_scores/confidence_Base_{part}.txt", "w")
+        g = open(f"./softmax_scores/confidence_Our_{part}.txt", "w")
+        for j, data in tqdm(enumerate(testLoader), total=N):
+            # if j < 1000:
+            #     continue
+            images, _ = data  # (batch_size, 3, 32, 32)
 
+            inputs = Variable(images.cuda(CUDA_DEVICE), requires_grad=True)
+            outputs = net1(inputs)
 
-    t0 = time.time()
-    print("Processing out-of-distribution images")
-###################################Out-of-Distributions#####################################
-    for j, data in enumerate(testloader):
-        if j<1000: continue
-        images, _ = data
-    
-    
-        inputs = Variable(images.cuda(CUDA_DEVICE), requires_grad = True)
-        outputs = net1(inputs)
-        
+            # Calculating the confidence of the output, no perturbation added here, no temperature scaling used
+            nnOutputs = logits_to_probs(outputs)
+            f.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
 
+            # Using temperature scaling
+            outputs = outputs / temper
 
-        # Calculating the confidence of the output, no perturbation added here
-        nnOutputs = outputs.data.cpu()
-        nnOutputs = nnOutputs.numpy()
-        nnOutputs = nnOutputs[0]
-        nnOutputs = nnOutputs - np.max(nnOutputs)
-        nnOutputs = np.exp(nnOutputs)/np.sum(np.exp(nnOutputs))
-        f2.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-        
-        # Using temperature scaling
-        outputs = outputs / temper
-  
-  
-        # Calculating the perturbation we need to add, that is,
-        # the sign of gradient of cross entropy loss w.r.t. input
-        maxIndexTemp = np.argmax(nnOutputs)
-        labels = Variable(torch.LongTensor([maxIndexTemp]).cuda(CUDA_DEVICE))
-        loss = criterion(outputs, labels)
-        loss.backward()
-        
-        # Normalizing the gradient to binary in {0, 1}
-        gradient =  (torch.ge(inputs.grad.data, 0))
-        gradient = (gradient.float() - 0.5) * 2
-        # Normalizing the gradient to the same space of image
-        gradient[0][0] = (gradient[0][0] )/(63.0/255.0)
-        gradient[0][1] = (gradient[0][1] )/(62.1/255.0)
-        gradient[0][2] = (gradient[0][2])/(66.7/255.0)
-        # Adding small perturbations to images
-        tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
-        outputs = net1(Variable(tempInputs))
-        outputs = outputs / temper
-        # Calculating the confidence after adding perturbations
-        nnOutputs = outputs.data.cpu()
-        nnOutputs = nnOutputs.numpy()
-        nnOutputs = nnOutputs[0]
-        nnOutputs = nnOutputs - np.max(nnOutputs)
-        nnOutputs = np.exp(nnOutputs)/np.sum(np.exp(nnOutputs))
-        g2.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-        if j % 100 == 99:
-            print("{:4}/{:4} images processed, {:.1f} seconds used.".format(j+1-1000, N-1000, time.time()-t0))
-            t0 = time.time()
+            # Calculating the perturbation we need to add, that is,
+            # the sign of gradient of cross entropy loss w.r.t. input
+            maxIndexTemp = np.argmax(nnOutputs)
+            labels = Variable(torch.LongTensor([maxIndexTemp]).cuda(CUDA_DEVICE))
+            loss = criterion(outputs, labels)
+            loss.backward()
 
-        if j== N-1: break
+            # Normalizing the gradient to binary in {0, 1}
+            gradient = torch.ge(inputs.grad.data, 0)
+            gradient = (gradient.float() - 0.5) * 2
+            # Normalizing the gradient to the same space of image
+            norm_scale = torch.tensor(NORM_SCALE).cuda(CUDA_DEVICE).view(1, 3, 1, 1)
+            gradient /= norm_scale
+            # Adding small perturbations to images
+            tempInputs = torch.add(inputs.data, gradient, alpha=-noiseMagnitude1)
+            outputs = net1(Variable(tempInputs))
+            # Calculating the confidence after adding perturbations
+            nnOutputs = logits_to_probs(outputs, temper)
+            g.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
+
+            if j == N - 1:
+                break
+        f.close()
+        g.close()
