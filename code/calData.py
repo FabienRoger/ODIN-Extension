@@ -20,6 +20,7 @@ import numpy as np
 import time
 from tqdm import tqdm
 from constants import NORM_SCALE
+from itertools import islice
 
 
 def logits_to_probs(logits, temperature=1):
@@ -34,19 +35,29 @@ def logits_to_probs(logits, temperature=1):
 
 
 def testData(
-    net1, criterion, CUDA_DEVICE, testLoaderIn, testLoaderOut, nnName, dataName, noiseMagnitude1, temper, max_n=100
+    net1,
+    criterion,
+    CUDA_DEVICE,
+    testLoaderIn,
+    testLoaderOut,
+    nnName,
+    dataName,
+    noiseMagnitude1,
+    temper,
+    max_n=100,
+    skip_first_n=1000,
 ):
 
     for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
         print(f"Processing {part}-distribution images")
         f = open(f"./softmax_scores/confidence_Base_{part}.txt", "w")
         g = open(f"./softmax_scores/confidence_Our_{part}.txt", "w")
-        N = min(len(testLoader), max_n)
 
-        for j, data in tqdm(enumerate(testLoader), total=N):
-            # if j < 1000:
-            #     continue
-            images, _ = data  # (batch_size, 3, 32, 32)
+        N = min(len(testLoader) - skip_first_n, max_n)
+        iterator = enumerate(islice(testLoader, skip_first_n, skip_first_n + N))
+
+        for j, data in tqdm(iterator, total=N):
+            images, _ = data  # (batch_size, 3, 32, 32), where batch_size = 1
 
             inputs = Variable(images.cuda(CUDA_DEVICE), requires_grad=True)
             # print(inputs.shape)
@@ -78,8 +89,5 @@ def testData(
             # Calculating the confidence after adding perturbations
             nnOutputs = logits_to_probs(outputs, temper)
             g.write("{}, {}, {}\n".format(temper, noiseMagnitude1, np.max(nnOutputs)))
-
-            if j == N - 1:
-                break
         f.close()
         g.close()
