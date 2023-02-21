@@ -30,8 +30,15 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from constants import file_name
 
 
+def fpr05(labels, data):
+    # calculate the true positive rate when fpr is <=5%
+    fpr, tpr, _ = roc_curve(labels, data)
+    fpr05_index = np.where(fpr <= 0.05)[0][-1]
+    return tpr[fpr05_index]
+
+
 def tpr95(labels, data):
-    # calculate the falsepositive error when tpr is 95%
+    # calculate the false positive rate when tpr is >= 95%
 
     fpr, tpr, _ = roc_curve(labels, data)
     tpr95_index = np.where(tpr >= 0.95)[0][0]
@@ -59,6 +66,7 @@ def metric(nn, dsName, algorithms):
     methods = {
         "FPR at TPR 95%:": (tpr95),
         "AUROC:": auroc,
+        "TPR at FPR 95%*:": (fpr05),
     }
 
     algnames = [alg.name for alg in algorithms]

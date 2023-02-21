@@ -14,6 +14,7 @@ Created on Sat Sep 19 20:55:56 2015
 
 from __future__ import print_function
 from abc import abstractmethod, ABC
+from math import ceil
 from typing import Any
 import torch
 from torch.autograd import Variable
@@ -23,6 +24,7 @@ import time
 from tqdm import tqdm
 from constants import NORM_SCALE, file_name
 from itertools import islice
+from torch.utils.data import DataLoader
 
 
 class Algorithm(ABC):
@@ -40,8 +42,8 @@ class BaseAlgorithm(Algorithm):
     @torch.no_grad()
     def apply(self, images, net):
         outputs = net(images)
-        nnOutputs = np.max(logits_to_probs(outputs))  # TODO: make batchable
-        return [(nnOutputs, "0")]
+        nnOutputs = np.max(logits_to_probs(outputs), axis=-1)
+        return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
     def name(self) -> str:
@@ -66,9 +68,9 @@ class OdinAlgorithm(Algorithm):
             # Using temperature scaling
             outputs = outputs / self.temper
             nnOutputs = logits_to_probs(outputs)
-            maxIndexTemp = np.argmax(nnOutputs)
+            maxIndexTemp = np.argmax(nnOutputs, axis=-1)
 
-            labels = Variable(torch.tensor([maxIndexTemp], device=outputs.device, dtype=torch.long))
+            labels = Variable(torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long))
 
             loss = self.criteria(outputs, labels)
             loss.backward()
@@ -85,49 +87,48 @@ class OdinAlgorithm(Algorithm):
         with torch.no_grad():
             outputs = net(inputs)
             # Calculating the confidence after adding perturbations
-            nnOutputs = logits_to_probs(outputs, self.temper)
-            return [(np.max(nnOutputs), "0")]  # TODO: make batchable
+            nnOutputs = np.max(logits_to_probs(outputs), axis=-1)
+            return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
     def name(self) -> str:
         return self._name
 
 
+@torch.no_grad()
 def logits_to_probs(logits: torch.Tensor, temperature=1) -> np.ndarray:
-    """Takes torch logits on gpu, returns numpy probs on cpu
-
-    TODO: make it batchable"""
-    logits = logits / temperature
-    nnOutputs = logits.data.cpu()
-    nnOutputs = nnOutputs.numpy()
-    nnOutputs = nnOutputs[0]
-    nnOutputs = nnOutputs - np.max(nnOutputs)
-    nnOutputs = np.exp(nnOutputs) / np.sum(np.exp(nnOutputs))
-    return nnOutputs
+    """Takes torch logits on gpu, returns numpy probs on cpu"""
+    return torch.softmax(logits / temperature, dim=-1).detach().cpu().numpy()
 
 
 def testData(
     net,
     CUDA_DEVICE,
-    testLoaderIn,
-    testLoaderOut,
+    testLoaderIn: DataLoader,
+    testLoaderOut: DataLoader,
     nnName,
     dataName,
     algorithms: list[Algorithm],
-    maxImages=100,
-    skipFirstImages=1000,
+    maxImages=128,
+    skipFirstImages=1024,
 ):
 
     for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
         print(f"Processing {part}-distribution images")
 
+        batch_size = testLoader.batch_size
+        assert batch_size is not None
+        maxBatches = ceil(maxImages / batch_size)
+        skipFirstBatchs = ceil(skipFirstImages / batch_size)
+
         files = {alg.name: open(file_name(nnName, dataName, alg.name, part), "w") for alg in algorithms}
 
-        N = min(len(testLoader) - skipFirstImages, maxImages)
-        iterator = enumerate(islice(testLoader, skipFirstImages, skipFirstImages + N))
+        N = min(len(testLoader) - skipFirstBatchs, maxBatches)
+        iterator = enumerate(islice(testLoader, skipFirstBatchs, skipFirstBatchs + N))
+        print(f"Processing {N} batches of {batch_size} images each for a total of {N * batch_size} images")
 
         for j, data in tqdm(iterator, total=N):
-            images, _ = data  # (batch_size, 3, 32, 32), where batch_size = 1
+            images, _ = data  # (batch_size, 3, 32, 32)
             images = images.cuda(CUDA_DEVICE)
 
             for alg in algorithms:

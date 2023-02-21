@@ -43,6 +43,7 @@ parser.add_argument("--magnitude", default=0.0014, type=float, help="perturbatio
 parser.add_argument("--temperature", default=1000, type=int, help="temperature scaling")
 parser.add_argument("--gpu", default=0, type=int, help="gpu index")
 parser.add_argument("--max_images", default=100, type=int, help="max number of images to test")
+parser.add_argument("--only_metric", action="store_true", help="only calculate metric")
 parser.set_defaults(argument=True)
 
 
@@ -74,7 +75,7 @@ parser.set_defaults(argument=True)
 def main():
     global args
     args = parser.parse_args()
-    c.test(args.nn, args.out_dataset, args.gpu, args.magnitude, args.temperature, args.max_images)
+    c.test(args.nn, args.out_dataset, args.gpu, args.magnitude, args.temperature, args.max_images, args.only_metric)
 
 
 if __name__ == "__main__":

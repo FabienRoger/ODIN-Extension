@@ -57,18 +57,19 @@ transform = transforms.Compose(
 # imName = "Imagenet"
 
 
-def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages):
+def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_metric):
 
     net1 = torch.load("../models/{}.pth".format(nnName))
-    optimizer1 = optim.SGD(net1.parameters(), lr=0, momentum=0)
     net1.cuda(CUDA_DEVICE)
+
+    batch_size = 16
 
     if nnName == "densenet10" or nnName == "wideresnet10":
         testset = torchvision.datasets.CIFAR10(root="../data", train=False, download=True, transform=transform)
-        testloaderIn = DataLoader(testset, batch_size=1, shuffle=False, num_workers=2)
+        testloaderIn = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
     elif nnName == "densenet100" or nnName == "wideresnet100":
         testset = torchvision.datasets.CIFAR100(root="../data", train=False, download=True, transform=transform)
-        testloaderIn = DataLoader(testset, batch_size=1, shuffle=False, num_workers=2)
+        testloaderIn = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
     else:
         raise ValueError(f"nnName is not correct: {nnName}")
 
@@ -79,7 +80,7 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages):
     else:
         testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
 
-    testloaderOut = DataLoader(testsetout, batch_size=1, shuffle=False, num_workers=2)
+    testloaderOut = DataLoader(testsetout, batch_size=batch_size, shuffle=False, num_workers=2)
 
     algorithms = [
         d.BaseAlgorithm(),
@@ -87,5 +88,6 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages):
         d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
     ]
 
-    d.testData(net1, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, algorithms, maxImages=maxImages)
+    if not only_metric:
+        d.testData(net1, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, algorithms, maxImages=maxImages)
     m.metric(nnName, dataName, algorithms)
