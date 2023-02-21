@@ -66,7 +66,7 @@ def metric(nn, dsName, algorithms):
     methods = {
         "FPR at TPR 95%:": (tpr95),
         "AUROC:": auroc,
-        "TPR at FPR 95%*:": (fpr05),
+        "TPR at FPR 5%*:": (fpr05),
     }
 
     algnames = [alg.name for alg in algorithms]

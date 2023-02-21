@@ -15,7 +15,7 @@ Created on Sat Sep 19 20:55:56 2015
 from __future__ import print_function
 from abc import abstractmethod, ABC
 from math import ceil
-from typing import Any
+from typing import Any, Literal, Union
 import torch
 from torch.autograd import Variable
 import numpy as np
@@ -37,16 +37,22 @@ class Algorithm(ABC):
     def name(self) -> str:
         ...
 
+    def blindInit(self, net, testLoaderIn):
+        pass
+
 
 class BaseAlgorithm(Algorithm):
-    def __init__(self, temperature=1, name="Base"):
+    def __init__(self, temperature=1, reverse=False, name="Base"):
         self.temperature = temperature
         self._name = name
+        self.reverse = reverse
 
     @torch.no_grad()
     def apply(self, images, net):
         outputs = net(images)
-        nnOutputs = np.max(logits_to_probs(outputs, self.temperature), axis=-1)
+        if self.reverse:
+            outputs = -outputs
+        nnOutputs = np.max(logits_to_logprobs(outputs, self.temperature), axis=-1)
         return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
@@ -71,7 +77,7 @@ class OdinAlgorithm(Algorithm):
 
             # Using temperatureature scaling
             outputs = outputs / self.temperature
-            nnOutputs = logits_to_probs(outputs)
+            nnOutputs = logits_to_logprobs(outputs)
             maxIndexTemp = np.argmax(nnOutputs, axis=-1)
 
             labels = Variable(torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long))
@@ -91,7 +97,7 @@ class OdinAlgorithm(Algorithm):
         with torch.no_grad():
             outputs = net(inputs)
             # Calculating the confidence after adding perturbations
-            nnOutputs = np.max(logits_to_probs(outputs, self.temperature), axis=-1)
+            nnOutputs = np.max(logits_to_logprobs(outputs, self.temperature), axis=-1)
             return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
@@ -99,10 +105,26 @@ class OdinAlgorithm(Algorithm):
         return self._name
 
 
+class TempBlindInit(Algorithm):
+    def __init__(self, parent: Union[OdinAlgorithm, BaseAlgorithm]):
+        self.parent = parent
+
+    def apply(self, images, net):
+        return self.parent.apply(images, net)
+
+    @property
+    def name(self) -> str:
+        return self.parent.name
+
+    @torch.no_grad()
+    def blindInit(self, net, testLoaderIn):
+        assert False, "todo"
+
+
 @torch.no_grad()
-def logits_to_probs(logits: torch.Tensor, temperatureature=1) -> np.ndarray:
+def logits_to_logprobs(logits: torch.Tensor, temperatureature=1) -> np.ndarray:
     """Takes torch logits on gpu, returns numpy probs on cpu"""
-    return torch.softmax(logits / temperatureature, dim=-1).detach().cpu().numpy()
+    return torch.log_softmax(logits / temperatureature, dim=-1).detach().cpu().numpy()
 
 
 def testData(
