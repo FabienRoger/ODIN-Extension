@@ -74,20 +74,12 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature):
     else:
         raise ValueError(f"nnName is not correct: {nnName}")
     
-    if dataName == "Gaussian":
-        d.testGaussian(net1, criterion, CUDA_DEVICE, testloaderIn, testloaderIn, nnName, dataName, epsilon, temperature)
-        m.metric(nnName, dataName)
-
-    elif dataName == "Uniform":
-        d.testUni(net1, criterion, CUDA_DEVICE, testloaderIn, testloaderIn, nnName, dataName, epsilon, temperature)
-        m.metric(nnName, dataName)
-    else:
-        testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
-        testloaderOut = DataLoader(testsetout, batch_size=1,
-                                         shuffle=False, num_workers=2)
-        
-        d.testData(net1, criterion, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, epsilon, temperature) 
-        m.metric(nnName, dataName)
+    testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
+    testloaderOut = DataLoader(testsetout, batch_size=1,
+                                        shuffle=False, num_workers=2)
+    
+    d.testData(net1, criterion, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, epsilon, temperature) 
+    m.metric(nnName, dataName)
 
 
 
