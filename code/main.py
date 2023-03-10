@@ -76,7 +76,15 @@ parser.set_defaults(argument=True)
 def main():
     global args
     args = parser.parse_args()
-    c.test(args.nn, args.out_dataset, args.gpu, args.magnitude, args.temperature, args.max_images, args.only_metric)
+    c.test(
+        args.nn,
+        args.out_dataset,
+        args.gpu,
+        args.magnitude,
+        args.temperature,
+        args.max_images,
+        args.only_metric,
+    )
 
 
 if __name__ == "__main__":

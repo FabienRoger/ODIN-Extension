@@ -4,7 +4,15 @@ from constants import NORM_BIAS, NORM_SCALE
 
 
 class UniformNoiseDataset(Dataset):
-    def __init__(self, size=10000, channels=3, height=32, width=32, norm_bias=NORM_BIAS, norm_scale=NORM_SCALE):
+    def __init__(
+        self,
+        size=10000,
+        channels=3,
+        height=32,
+        width=32,
+        norm_bias=NORM_BIAS,
+        norm_scale=NORM_SCALE,
+    ):
         self.size = size
         self.channels = channels
         self.height = height
@@ -23,7 +31,15 @@ class UniformNoiseDataset(Dataset):
 
 
 class GaussianNoiseDataset(Dataset):
-    def __init__(self, size=10000, channels=3, height=32, width=32, norm_bias=NORM_BIAS, norm_scale=NORM_SCALE):
+    def __init__(
+        self,
+        size=10000,
+        channels=3,
+        height=32,
+        width=32,
+        norm_bias=NORM_BIAS,
+        norm_scale=NORM_SCALE,
+    ):
         self.size = size
         self.channels = channels
         self.height = height

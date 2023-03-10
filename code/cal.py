@@ -73,12 +73,15 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
     else:
         raise ValueError(f"nnName is not correct: {nnName}")
 
+    ood_batch_image_transformation = None
     if dataName == "Uniform":
         testsetout = UniformNoiseDataset()
     elif dataName == "Gaussian":
         testsetout = GaussianNoiseDataset()
     elif dataName == "FSGM":
-        testsetout = d.FSGMAlgorithm().apply(testset, net1)
+        testsetout = testset
+        attacker = d.Attacker(temperature, -epsilon)
+        ood_batch_image_transformation = lambda images: attacker.attack(images, net1)
     else:
         testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
 
@@ -93,5 +96,15 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
     ]
 
     if not only_metric:
-        d.testData(net1, CUDA_DEVICE, testloaderIn, testloaderOut, nnName, dataName, algorithms, maxImages=maxImages)
+        d.testData(
+            net1,
+            CUDA_DEVICE,
+            testloaderIn,
+            testloaderOut,
+            nnName,
+            dataName,
+            algorithms,
+            maxImages=maxImages,
+            ood_batch_image_transformation=ood_batch_image_transformation,
+        )
     m.metric(nnName, dataName, algorithms)

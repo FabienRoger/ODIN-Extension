@@ -14,8 +14,9 @@ Created on Sat Sep 19 20:55:56 2015
 
 from __future__ import print_function
 from abc import abstractmethod, ABC
+from dataclasses import dataclass
 from math import ceil
-from typing import Any, Literal, Union
+from typing import Any, Callable, Literal, Union, Optional
 import torch
 from torch.autograd import Variable
 import numpy as np
@@ -59,15 +60,15 @@ class BaseAlgorithm(Algorithm):
     def name(self) -> str:
         return self._name
 
-class OdinAlgorithm(Algorithm):
-    def __init__(self, temperature: float, noiseMagnitude: float, iters: int = 1, name: str = "Odin"):
-        self.temperature = temperature
-        self.noiseMagnitude = noiseMagnitude
-        self.iters = iters
-        self.criteria = torch.nn.CrossEntropyLoss()
-        self._name = name
 
-    def apply(self, images, net):
+@dataclass
+class Attacker:
+    temperature: float
+    noiseMagnitude: float
+    iters: int = 1
+    criteria = torch.nn.CrossEntropyLoss()
+
+    def attack(self, images, net):
         inputs = Variable(images, requires_grad=True)
         opt = torch.optim.SGD([inputs], lr=1e-3)  # just here to zero
         for _ in range(self.iters):
@@ -79,7 +80,7 @@ class OdinAlgorithm(Algorithm):
             nnOutputs = logits_to_logprobs(outputs)
             maxIndexTemp = np.argmax(nnOutputs, axis=-1)
 
-            labels = Variable(torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long))
+            labels = torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long)
 
             loss = self.criteria(outputs, labels)
             loss.backward()
@@ -92,6 +93,24 @@ class OdinAlgorithm(Algorithm):
             gradient /= norm_scale
             # Adding small perturbations to images
             inputs.data = torch.add(inputs.data, gradient, alpha=-self.noiseMagnitude)
+
+        return inputs.data
+
+
+class OdinAlgorithm(Algorithm):
+    def __init__(
+        self,
+        temperature: float,
+        noiseMagnitude: float,
+        iters: int = 1,
+        name: str = "Odin",
+    ):
+        self.attacker = Attacker(temperature, noiseMagnitude, iters)
+        self.temperature = temperature
+        self._name = name
+
+    def apply(self, images, net):
+        inputs = self.attacker.attack(images, net)
 
         with torch.no_grad():
             outputs = net(inputs)
@@ -144,34 +163,6 @@ class TempBlindInit(Algorithm):
 
         self.parent.temperature = temp
 
-class FSGMAlgorithm(Algorithm):
-    def __init__(self, iters : int=1):
-        self.iters = iters
-
-    def apply(self, images, net):
-        inputs = Variable(images, requires_grad=True)
-        opt = torch.optim.SGD([inputs], lr=1e-3)  # just here to zero
-        for _ in range(self.iters):
-            opt.zero_grad()
-            outputs = net(inputs)
-
-            # Using temperatureature scaling
-            outputs = outputs / self.temperature
-            nnOutputs = logits_to_logprobs(outputs)
-            maxIndexTemp = np.argmax(nnOutputs, axis=-1)
-
-            labels = Variable(torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long))
-
-            loss = self.criteria(outputs, labels)
-            loss.backward()
-
-            gradient = torch.sign(inputs.grad.data)
-
-            # Adding small perturbations to images
-            inputs.data = torch.add(inputs.data, gradient, alpha=EPS_FSGM)
-        
-        return inputs
-
 
 @torch.no_grad()
 def logits_to_logprobs(logits: torch.Tensor, temperatureature: float = 1) -> np.ndarray:
@@ -189,6 +180,7 @@ def testData(
     algorithms: list[Algorithm],
     maxImages=128,
     skipFirstImages=1024,
+    ood_batch_image_transformation: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
 ):
 
     for alg in algorithms:
@@ -211,6 +203,9 @@ def testData(
         for j, data in tqdm(iterator, total=N):
             images, _ = data  # (batch_size, 3, 32, 32)
             images = images.cuda(CUDA_DEVICE)
+
+            if ood_batch_image_transformation is not None and part == "Out":
+                images = ood_batch_image_transformation(images)
 
             for alg in algorithms:
                 scores = alg.apply(images, net)

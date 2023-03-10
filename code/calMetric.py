@@ -99,5 +99,5 @@ def metric(nn, dsName, algorithms):
         print(line)
     # Save
     os.makedirs("results", exist_ok=True)
-    with open(f"results/{nn}_{dsName}_{datetime.now()}.txt", "w") as f:
+    with open(f"results/{nn}_{dsName}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.txt", "w") as f:
         f.write("\n".join(text))
