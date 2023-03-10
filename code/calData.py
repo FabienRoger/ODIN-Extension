@@ -63,6 +63,10 @@ class BaseAlgorithm(Algorithm):
 
 @dataclass
 class Attacker:
+    """Use an epsilon attack on the image
+
+    Makes the most likely class more likely by eps*sign(grad(-logprob(most_likely_class)))."""
+
     temperature: float
     noiseMagnitude: float
     iters: int = 1
