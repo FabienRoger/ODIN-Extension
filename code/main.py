@@ -64,6 +64,7 @@ parser.set_defaults(argument=True)
 # iSUN:                     iSUN
 # Gaussian noise:           Gaussian
 # Uniform  noise:           Uniform
+# FSGM:                     FSGM attack
 # dataName = "Imagenet"
 
 

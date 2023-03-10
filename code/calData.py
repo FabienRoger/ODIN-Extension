@@ -22,7 +22,7 @@ import numpy as np
 import numpy as np
 import time
 from tqdm import tqdm
-from constants import NORM_SCALE, file_name
+from constants import NORM_SCALE, file_name, EPS_FSGM
 from itertools import islice
 from torch.utils.data import DataLoader
 
@@ -58,7 +58,6 @@ class BaseAlgorithm(Algorithm):
     @property
     def name(self) -> str:
         return self._name
-
 
 class OdinAlgorithm(Algorithm):
     def __init__(self, temperature: float, noiseMagnitude: float, iters: int = 1, name: str = "Odin"):
@@ -144,6 +143,34 @@ class TempBlindInit(Algorithm):
             temp *= 2
 
         self.parent.temperature = temp
+
+class FSGMAlgorithm(Algorithm):
+    def __init__(self, iters : int=1):
+        self.iters = iters
+
+    def apply(self, images, net):
+        inputs = Variable(images, requires_grad=True)
+        opt = torch.optim.SGD([inputs], lr=1e-3)  # just here to zero
+        for _ in range(self.iters):
+            opt.zero_grad()
+            outputs = net(inputs)
+
+            # Using temperatureature scaling
+            outputs = outputs / self.temperature
+            nnOutputs = logits_to_logprobs(outputs)
+            maxIndexTemp = np.argmax(nnOutputs, axis=-1)
+
+            labels = Variable(torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long))
+
+            loss = self.criteria(outputs, labels)
+            loss.backward()
+
+            gradient = torch.sign(inputs.grad.data)
+
+            # Adding small perturbations to images
+            inputs.data = torch.add(inputs.data, gradient, alpha=EPS_FSGM)
+        
+        return inputs
 
 
 @torch.no_grad()

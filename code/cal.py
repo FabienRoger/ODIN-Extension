@@ -77,6 +77,8 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
         testsetout = UniformNoiseDataset()
     elif dataName == "Gaussian":
         testsetout = GaussianNoiseDataset()
+    elif dataName == "FSGM":
+        testsetout = d.FSGMAlgorithm().apply(testset, net1)
     else:
         testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
 
