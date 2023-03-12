@@ -29,9 +29,9 @@ from torch.utils.data import DataLoader
 
 
 class Algorithm(ABC):
-    @abstractmethod
-    def apply(self, images, net) -> list[tuple[float, str]]:
-        ...
+    #@abstractmethod
+    #def apply(self, images, net) -> list[tuple[float, str]]:
+    #    ...
 
     @property  # type: ignore
     @abstractmethod
@@ -43,17 +43,19 @@ class Algorithm(ABC):
 
 
 class BaseAlgorithm(Algorithm):
-    def __init__(self, temperature: float = 1.0, reverse: bool = False, name: str = "Base"):
+    def __init__(self, max_mean :bool, temperature: float = 1.0, reverse: bool = False, name: str = "Base"):
         self.temperature = temperature
         self._name = name
         self.reverse = reverse
+        self.max_mean = max_mean
 
     @torch.no_grad()
     def apply(self, images, net):
         outputs = net(images)
         if self.reverse:
             outputs = -outputs
-        nnOutputs = np.max(logits_to_logprobs(outputs, self.temperature), axis=-1)
+        nnOutputs = (np.max(logits_to_logprobs(outputs, self.temperature), axis=-1) - 
+                    self.max_mean * np.mean(logits_to_logprobs(outputs, self.temperature), axis=-1) )
         return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
 
     @property
@@ -181,10 +183,11 @@ def testData(
     testLoaderOut: DataLoader,
     nnName,
     dataName,
-    algorithms: list[Algorithm],
+    algorithms #: list[Algorithm]
+    ,
     maxImages=128,
     skipFirstImages=1024,
-    ood_batch_image_transformation: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+    ood_batch_image_transformation: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
 ):
 
     for alg in algorithms:

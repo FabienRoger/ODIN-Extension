@@ -57,7 +57,7 @@ transform = transforms.Compose(
 # imName = "Imagenet"
 
 
-def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_metric):
+def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_metric, max_mean):
 
     net1 = torch.load("../models/{}.pth".format(nnName))
     net1.cuda(CUDA_DEVICE)
@@ -88,9 +88,9 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
     testloaderOut = DataLoader(testsetout, batch_size=batch_size, shuffle=False, num_workers=2)
 
     algorithms = [
-        d.BaseAlgorithm(),
+        d.BaseAlgorithm(max_mean),
         d.BaseAlgorithm(temperature, name=f"Base T={temperature}"),
-        d.TempBlindInit(d.BaseAlgorithm()),
+        d.TempBlindInit(d.BaseAlgorithm(max_mean)),
         d.OdinAlgorithm(temperature, epsilon),
         d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
     ]
@@ -105,6 +105,6 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
             dataName,
             algorithms,
             maxImages=maxImages,
-            ood_batch_image_transformation=ood_batch_image_transformation,
+            ood_batch_image_transformation=ood_batch_image_transformation
         )
     m.metric(nnName, dataName, algorithms)
