@@ -29,9 +29,9 @@ from torch.utils.data import DataLoader
 
 
 class Algorithm(ABC):
-    #@abstractmethod
-    #def apply(self, images, net) -> list[tuple[float, str]]:
-    #    ...
+    @abstractmethod
+    def apply(self, images, net) -> list[tuple[float, str]]:
+        ...
 
     @property  # type: ignore
     @abstractmethod
@@ -183,8 +183,7 @@ def testData(
     testLoaderOut: DataLoader,
     nnName,
     dataName,
-    algorithms #: list[Algorithm]
-    ,
+    algorithms : list[Algorithm] ,
     maxImages=128,
     skipFirstImages=1024,
     ood_batch_image_transformation: Optional[Callable[[torch.Tensor], torch.Tensor]] = None

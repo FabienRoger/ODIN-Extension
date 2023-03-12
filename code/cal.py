@@ -59,8 +59,14 @@ transform = transforms.Compose(
 
 def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_metric, max_mean):
 
-    net1 = torch.load("../models/{}.pth".format(nnName))
-    net1.cuda(CUDA_DEVICE)
+    #Quick Fix from github issues
+    if torch.cuda.is_available():
+        map_location=lambda storage, loc: storage.cuda()
+    else:
+        map_location = "cpu"
+
+    net1 = torch.load("../models/{}.pth".format(nnName), map_location=map_location)
+    if torch.cuda.is_available(): net1.cuda(CUDA_DEVICE)
 
     batch_size = 16
 
@@ -89,7 +95,7 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
 
     algorithms = [
         d.BaseAlgorithm(max_mean),
-        d.BaseAlgorithm(temperature, name=f"Base T={temperature}"),
+        d.BaseAlgorithm(max_mean, temperature, name=f"Base T={temperature}"),
         d.TempBlindInit(d.BaseAlgorithm(max_mean)),
         d.OdinAlgorithm(temperature, epsilon),
         d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
