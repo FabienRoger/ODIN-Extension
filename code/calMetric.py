@@ -89,15 +89,15 @@ def metric(nn, dsName, algorithms):
         "{:31}{:>22}".format("Datapoints in distribution:", len(datas[0])),  # type: ignore
         "{:31}{:>22}".format("Datapoints out distribution:", len(datas[1])),  # type: ignore
         "",
-        f"{'Method':20}|" + "|".join([f"{alg_name:>15}" for alg_name in algnames]),
+        f"{'Method':15}|" + "|".join([f"{alg_name:>14}" for alg_name in algnames]),
     ]
     for method_name, method_res in methods_res.items():
-        text.append(f"{method_name:20}|" + "|".join([f"{res * 100:>14.1f}%" for res in method_res]))
+        text.append(f"{method_name:15}|" + "|".join([f"{res * 100:>13.1f}%" for res in method_res]))
 
     # Print
     for line in text:
         print(line)
     # Save
     os.makedirs("results", exist_ok=True)
-    with open(f"results/{nn}_{dsName}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.txt", "w") as f:
+    with open(f"results/{nn}_{dsName}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.out", "w") as f:
         f.write("\n".join(text))

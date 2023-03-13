@@ -76,7 +76,8 @@ class BaseAlgorithm(Algorithm):
 class Attacker:
     """Use an epsilon attack on the image
 
-    Makes the most likely class more likely by eps*sign(grad(-logprob(most_likely_class)))."""
+    Makes the most likely class (or the constant_target class)
+    more likely by eps*sign(grad(-logprob_class))."""
 
     temperature: float
     noiseMagnitude: float
