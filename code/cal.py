@@ -27,7 +27,7 @@ from scipy import misc
 import calMetric as m
 import calData as d
 from torch.utils.data import DataLoader
-from constants import NORM_BIAS, NORM_SCALE, DEVICE, EPS_FSGM, BATCH_SIZE
+from constants import NORM_BIAS, NORM_SCALE, DEVICE, EPS_FSGM, BATCH_SIZE, IMAGE_SIZE
 from customDatasets import UniformNoiseDataset, GaussianNoiseDataset
 from torch.serialization import SourceChangeWarning
 
@@ -40,6 +40,7 @@ transform = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.Normalize(NORM_BIAS, NORM_SCALE),
+        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
     ]
 )
 
@@ -80,6 +81,10 @@ def test(nnName, dataName, epsilon, temperature, maxImages, only_metric):
         testsetout = testset
         attacker = d.Attacker(temperature, -EPS_FSGM)
         ood_batch_image_transformation = lambda images: attacker.attack(images, net1)
+    elif dataName == "Places365":
+        testsetout = torchvision.datasets.Places365(
+            root="../data", split="val", download=True, transform=transform, small=True
+        )
     else:
         testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
 
