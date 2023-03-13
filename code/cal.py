@@ -27,7 +27,7 @@ from scipy import misc
 import calMetric as m
 import calData as d
 from torch.utils.data import DataLoader
-from constants import NORM_BIAS, NORM_SCALE, DEVICE, EPS_FSGM, BATCH_SIZE, IMAGE_SIZE
+from constants import NORM_BIAS, NORM_SCALE, DEVICE, EPS_FSGM, IMAGE_SIZE
 from customDatasets import UniformNoiseDataset, GaussianNoiseDataset
 from torch.serialization import SourceChangeWarning
 
@@ -57,11 +57,9 @@ transform = transforms.Compose(
 # imName = "Imagenet"
 
 
-def test(nnName, dataName, epsilon, temperature, maxImages, only_metric):
+def test(nnName, dataName, epsilon, temperature, maxImages, batch_size, only_metric):
 
     net1 = torch.load("../models/{}.pth".format(nnName)).to(DEVICE)
-
-    batch_size = BATCH_SIZE
 
     if nnName == "densenet10" or nnName == "wideresnet10":
         testset = torchvision.datasets.CIFAR10(root="../data", train=False, download=True, transform=transform)
@@ -92,6 +90,9 @@ def test(nnName, dataName, epsilon, temperature, maxImages, only_metric):
         d.TempBlindInit(d.BaseAlgorithm()),
         d.OdinAlgorithm(temperature, epsilon),
         d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
+        d.OdinAlgorithm(temperature, epsilon, iters=4, name="Odin x 4"),
+        d.BaseAlgorithm(function="max_logit", name="Max Logit"),
+        d.BaseAlgorithm(function="max_m_mean_logit", name="Max Mean Logit"),
     ]
 
     if not only_metric:

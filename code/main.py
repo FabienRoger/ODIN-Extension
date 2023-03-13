@@ -42,6 +42,7 @@ parser.add_argument("--out_dataset", default="Imagenet", type=str, help="out-of-
 parser.add_argument("--magnitude", default=0.0014, type=float, help="perturbation magnitude")
 parser.add_argument("--temperature", default=1000, type=int, help="temperature scaling")
 parser.add_argument("--max_images", default=100, type=int, help="max number of images to test")
+parser.add_argument("--batch_size", default=64, type=int, help="batch size")
 parser.add_argument("--only_metric", action="store_true", help="only calculate metric")
 parser.set_defaults(argument=True)
 
@@ -81,6 +82,7 @@ def main():
         args.magnitude,
         args.temperature,
         args.max_images,
+        args.batch_size,
         args.only_metric,
     )
 
