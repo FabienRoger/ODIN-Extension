@@ -26,6 +26,7 @@ from tqdm import tqdm
 from constants import NORM_SCALE, file_name, EPS_FSGM, DEVICE
 from itertools import islice
 from torch.utils.data import DataLoader
+from pathlib import Path
 
 
 class Algorithm(ABC):
@@ -72,7 +73,7 @@ class Attacker:
     noiseMagnitude: float
     iters: int = 1
     criteria = torch.nn.CrossEntropyLoss()
-    # TODO: constants target
+    constant_target: Optional[int] = None  # If None, pick the most likely class
 
     def attack(self, images, net):
         inputs = Variable(images, requires_grad=True)
@@ -81,13 +82,15 @@ class Attacker:
             opt.zero_grad()
             outputs = net(inputs)
 
+            if self.constant_target is None:
+                labels = torch.argmax(outputs, dim=1)
+            else:
+                labels = torch.full_like(
+                    torch.argmax(outputs, dim=1), self.constant_target, dtype=torch.long, device=DEVICE
+                )
+
             # Using temperatureature scaling
             outputs = outputs / self.temperature
-            nnOutputs = logits_to_logprobs(outputs)
-            maxIndexTemp = np.argmax(nnOutputs, axis=-1)
-
-            labels = torch.tensor(maxIndexTemp, device=outputs.device, dtype=torch.long)
-
             loss = self.criteria(outputs, labels)
             loss.backward()
 
@@ -187,6 +190,7 @@ def testData(
     skipFirstImages=1024,
     ood_batch_image_transformation: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
 ):
+    Path("softmax_scores").mkdir(exist_ok=True)
 
     for alg in algorithms:
         alg.blindInit(net, testLoaderIn)

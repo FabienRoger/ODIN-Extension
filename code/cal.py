@@ -79,7 +79,7 @@ def test(nnName, dataName, epsilon, temperature, maxImages, only_metric):
         testsetout = GaussianNoiseDataset()
     elif dataName == "FSGM":
         testsetout = testset
-        attacker = d.Attacker(temperature, -EPS_FSGM)
+        attacker = d.Attacker(temperature, -EPS_FSGM, constant_target=0)
         ood_batch_image_transformation = lambda images: attacker.attack(images, net1)
     else:
         testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
