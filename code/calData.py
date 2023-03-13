@@ -23,7 +23,7 @@ import numpy as np
 import numpy as np
 import time
 from tqdm import tqdm
-from constants import NORM_SCALE, file_name, EPS_FSGM
+from constants import NORM_SCALE, file_name, EPS_FSGM, DEVICE
 from itertools import islice
 from torch.utils.data import DataLoader
 
@@ -38,7 +38,7 @@ class Algorithm(ABC):
     def name(self) -> str:
         ...
 
-    def blindInit(self, net, testLoaderIn, cuda_device: int = 0):
+    def blindInit(self, net, testLoaderIn):
         pass
 
 
@@ -47,6 +47,7 @@ class BaseAlgorithm(Algorithm):
         self.temperature = temperature
         self._name = name
         self.reverse = reverse
+        # TODO: max/max - mean
 
     @torch.no_grad()
     def apply(self, images, net):
@@ -71,6 +72,7 @@ class Attacker:
     noiseMagnitude: float
     iters: int = 1
     criteria = torch.nn.CrossEntropyLoss()
+    # TODO: constants target
 
     def attack(self, images, net):
         inputs = Variable(images, requires_grad=True)
@@ -142,7 +144,7 @@ class TempBlindInit(Algorithm):
         return self._name
 
     @torch.no_grad()
-    def blindInit(self, net, testLoaderIn: DataLoader, cuda_device: int = 0):
+    def blindInit(self, net, testLoaderIn: DataLoader):
         dataset = testLoaderIn.dataset
         ds_len = len(dataset)  # type: ignore
         batch_size: int = testLoaderIn.batch_size  # type: ignore
@@ -150,7 +152,7 @@ class TempBlindInit(Algorithm):
         logits_list = []
         batches = [samples[i : i + batch_size] for i in range(0, len(samples), batch_size)]
         for batch in batches:
-            images = torch.stack([dataset[i][0] for i in batch], dim=0).cuda(cuda_device)
+            images = torch.stack([dataset[i][0] for i in batch], dim=0).to(DEVICE)
             logits_list.append(net(images))
         logits = torch.cat(logits_list, dim=0)
 
@@ -176,7 +178,6 @@ def logits_to_logprobs(logits: torch.Tensor, temperatureature: float = 1) -> np.
 
 def testData(
     net,
-    CUDA_DEVICE,
     testLoaderIn: DataLoader,
     testLoaderOut: DataLoader,
     nnName,
@@ -188,7 +189,7 @@ def testData(
 ):
 
     for alg in algorithms:
-        alg.blindInit(net, testLoaderIn, CUDA_DEVICE)
+        alg.blindInit(net, testLoaderIn)
 
     for testLoader, part in zip([testLoaderIn, testLoaderOut], ["In", "Out"]):
         print(f"Processing {part}-distribution images")
@@ -206,7 +207,7 @@ def testData(
 
         for j, data in tqdm(iterator, total=N):
             images, _ = data  # (batch_size, 3, 32, 32)
-            images = images.cuda(CUDA_DEVICE)
+            images = images.to(DEVICE)
 
             if ood_batch_image_transformation is not None and part == "Out":
                 images = ood_batch_image_transformation(images)

@@ -41,7 +41,6 @@ parser.add_argument("--nn", default="densenet10", type=str, help="neural network
 parser.add_argument("--out_dataset", default="Imagenet", type=str, help="out-of-distribution dataset")
 parser.add_argument("--magnitude", default=0.0014, type=float, help="perturbation magnitude")
 parser.add_argument("--temperature", default=1000, type=int, help="temperature scaling")
-parser.add_argument("--gpu", default=0, type=int, help="gpu index")
 parser.add_argument("--max_images", default=100, type=int, help="max number of images to test")
 parser.add_argument("--only_metric", action="store_true", help="only calculate metric")
 parser.set_defaults(argument=True)
@@ -64,7 +63,7 @@ parser.set_defaults(argument=True)
 # iSUN:                     iSUN
 # Gaussian noise:           Gaussian
 # Uniform  noise:           Uniform
-# FSGM:                     FSGM attack
+# FSGM:                     FSGM attack on the train data
 # dataName = "Imagenet"
 
 
@@ -79,7 +78,6 @@ def main():
     c.test(
         args.nn,
         args.out_dataset,
-        args.gpu,
         args.magnitude,
         args.temperature,
         args.max_images,

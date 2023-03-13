@@ -27,12 +27,11 @@ from scipy import misc
 import calMetric as m
 import calData as d
 from torch.utils.data import DataLoader
-from constants import NORM_BIAS, NORM_SCALE
+from constants import NORM_BIAS, NORM_SCALE, DEVICE, EPS_FSGM, BATCH_SIZE
 from customDatasets import UniformNoiseDataset, GaussianNoiseDataset
 from torch.serialization import SourceChangeWarning
 
 warnings.filterwarnings("ignore", category=SourceChangeWarning)
-# CUDA_DEVICE = 0
 
 start = time.time()
 # loading data sets
@@ -57,12 +56,11 @@ transform = transforms.Compose(
 # imName = "Imagenet"
 
 
-def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_metric):
+def test(nnName, dataName, epsilon, temperature, maxImages, only_metric):
 
-    net1 = torch.load("../models/{}.pth".format(nnName))
-    net1.cuda(CUDA_DEVICE)
+    net1 = torch.load("../models/{}.pth".format(nnName)).to(DEVICE)
 
-    batch_size = 16
+    batch_size = BATCH_SIZE
 
     if nnName == "densenet10" or nnName == "wideresnet10":
         testset = torchvision.datasets.CIFAR10(root="../data", train=False, download=True, transform=transform)
@@ -80,7 +78,7 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
         testsetout = GaussianNoiseDataset()
     elif dataName == "FSGM":
         testsetout = testset
-        attacker = d.Attacker(temperature, -epsilon)
+        attacker = d.Attacker(temperature, -EPS_FSGM)
         ood_batch_image_transformation = lambda images: attacker.attack(images, net1)
     else:
         testsetout = torchvision.datasets.ImageFolder("../data/{}".format(dataName), transform=transform)
@@ -98,7 +96,6 @@ def test(nnName, dataName, CUDA_DEVICE, epsilon, temperature, maxImages, only_me
     if not only_metric:
         d.testData(
             net1,
-            CUDA_DEVICE,
             testloaderIn,
             testloaderOut,
             nnName,

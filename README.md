@@ -38,7 +38,6 @@ Wide ResNet     |  3.71       | 19.86
 
 ### Dependencies
 
-* CUDA 8.0
 * PyTorch
 * Anaconda2 or 3
 * At least **three** GPU
