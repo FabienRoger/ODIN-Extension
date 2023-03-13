@@ -43,20 +43,29 @@ class Algorithm(ABC):
         pass
 
 
+eval_functions = {
+    "max_logprob": lambda x, t: torch.max(torch.log_softmax(x / t, dim=-1), dim=-1).values,
+    "max_logit": lambda x, _t: torch.max(x, dim=-1).values,
+    "max_m_mean_logit": lambda x, _t: torch.max(x, dim=-1).values - torch.mean(x, dim=-1),
+}
+
+
 class BaseAlgorithm(Algorithm):
-    def __init__(self, temperature: float = 1.0, reverse: bool = False, name: str = "Base"):
+    def __init__(
+        self, temperature: float = 1.0, reverse: bool = False, function: str = "max_logprob", name: str = "Base"
+    ):
         self.temperature = temperature
         self._name = name
         self.reverse = reverse
-        # TODO: max/max - mean
+        self.function = eval_functions[function]
 
     @torch.no_grad()
     def apply(self, images, net):
         outputs = net(images)
         if self.reverse:
             outputs = -outputs
-        nnOutputs = np.max(logits_to_logprobs(outputs, self.temperature), axis=-1)
-        return [(nnOutputs[i], "0") for i in range(len(nnOutputs))]
+        scores = self.function(outputs, self.temperature)
+        return [(s.item(), "0") for s in scores]
 
     @property
     def name(self) -> str:
@@ -101,7 +110,7 @@ class Attacker:
             norm_scale = torch.tensor(NORM_SCALE, device=gradient.device).view(1, 3, 1, 1)
             gradient /= norm_scale
             # Adding small perturbations to images
-            inputs.data = torch.add(inputs.data, gradient, alpha=-self.noiseMagnitude)
+            inputs.data = torch.add(inputs.data, gradient, alpha=-self.noiseMagnitude / self.iters)
 
         return inputs.data
 
