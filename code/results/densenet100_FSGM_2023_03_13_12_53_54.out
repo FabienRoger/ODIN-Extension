@@ -3,7 +3,7 @@ Out-of-distribution dataset:                     FSGM
 Datapoints in distribution:                      2048
 Datapoints out distribution:                     2048
 
-Method              |           Base|    Base T=1000| TempBlind Base|           Odin|       Odin x 2|       Odin x 4|      Max Logit| Max Mean Logit
+Method         |          Base|   Base T=1000 TempBlind Base|          Odin|      Odin x 2|      Odin x 4|     Max Logit| Max Mean Logit
 FPR at TPR 95%:|         86.8%|         85.6%|         85.1%|         84.6%|         82.1%|         80.8%|         85.6%|         85.6%
 AUROC:         |         66.6%|         69.3%|         69.8%|         70.9%|         72.2%|         72.8%|         69.3%|         69.3%
 TPR at FPR 5%*:|         17.2%|         16.2%|         16.9%|         18.8%|         20.6%|         21.1%|         16.3%|         16.3%
