@@ -1,0 +1,9 @@
+Neural network architecture:          DenseNet-BC-100
+Out-of-distribution dataset:                Places365
+Datapoints in distribution:                      2048
+Datapoints out distribution:                     2048
+
+Method         |          Base|   Base T=1000|TempBlind Base|          Odin|TempBlind Odin|      Odin x 2|      Odin x 4|     Max Logit|Max Mean Logit
+FPR at TPR 95%:|         49.6%|         26.3%|         27.6%|         18.5%|         18.7%|         17.7%|         17.5%|         26.2%|         26.2%
+AUROC:         |         92.3%|         94.6%|         94.6%|         96.2%|         96.3%|         96.4%|         96.4%|         94.6%|         94.6%
+TPR at FPR 5%*:|         75.1%|         76.1%|         77.0%|         80.0%|         80.4%|         80.4%|         80.7%|         76.1%|         76.1%

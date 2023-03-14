@@ -89,6 +89,7 @@ def test(nnName, dataName, epsilon, temperature, maxImages, batch_size, only_met
         d.BaseAlgorithm(temperature, name=f"Base T={temperature}"),
         d.TempBlindInit(d.BaseAlgorithm()),
         d.OdinAlgorithm(temperature, epsilon),
+        d.TempBlindInit(d.OdinAlgorithm(temperature, epsilon)),
         d.OdinAlgorithm(temperature, epsilon, iters=2, name="Odin x 2"),
         d.OdinAlgorithm(temperature, epsilon, iters=4, name="Odin x 4"),
         d.BaseAlgorithm(function="max_logit", name="Max Logit"),
